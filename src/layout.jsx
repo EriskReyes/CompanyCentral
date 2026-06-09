@@ -11,11 +11,15 @@ function useClickOutside(ref, onClose) {
   }, []);
 }
 
-export function Sidebar({ active, onNavigate, collapsed, role, currentUser }) {
+export function Sidebar({ active, onNavigate, collapsed, role, currentUser, company, onLogout }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const ref = useRef();
+  useClickOutside(ref, () => setShowMenu(false));
+
   const roleObj = ROLES.find(r => r.key === role);
   return (
     <aside className="sidebar">
-      <div className="side-brand">
+      <div className="side-brand" onClick={() => onNavigate("dashboard")} style={{ cursor: "pointer" }}>
         <div className="brand-mark">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 7l3.5 11 3-7 2.5 7L18 7" /><path d="M19.5 5.5l1.5 13" opacity="0.5" />
@@ -23,6 +27,13 @@ export function Sidebar({ active, onNavigate, collapsed, role, currentUser }) {
         </div>
         <div className="brand-name">Work<b>Central</b></div>
       </div>
+
+      {company && (
+        <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--line)", fontSize:11.5, color:"var(--muted)" }}>
+          <div style={{ fontWeight:600, color:"var(--ink-2)", marginBottom:3 }}>{company.name}</div>
+          <div style={{ fontSize:10 }}>{company.companyId}</div>
+        </div>
+      )}
 
       <div className="side-scroll">
         {NAV.map(group => {
@@ -50,13 +61,38 @@ export function Sidebar({ active, onNavigate, collapsed, role, currentUser }) {
       </div>
 
       <div className="side-foot">
-        <div className="side-user">
+        <div className="side-user" onClick={() => setShowMenu(!showMenu)} style={{ cursor:"pointer", position:"relative" }} ref={ref}>
           <Avatar id={currentUser.id} size={32} />
           <div className="su-meta">
             <div className="su-name">{currentUser.name}</div>
-            <div className="su-role">{roleObj.name} · {currentUser.title.length > 18 ? currentUser.title.slice(0,18)+"…" : currentUser.title}</div>
+            <div className="su-role">{roleObj.name} · {currentUser.title?.length > 18 ? currentUser.title?.slice(0,18)+"…" : currentUser.title}</div>
           </div>
           <Icon className="su-caret" name="chevronDown" size={15} style={{ color:"var(--side-ink-dim)" }} />
+
+          {showMenu && (
+            <div style={{
+              position:"absolute",
+              bottom:"100%",
+              left:0,
+              right:0,
+              marginBottom:8,
+              background:"var(--surface)",
+              border:"1px solid var(--line)",
+              borderRadius:"var(--r-lg)",
+              boxShadow:"var(--sh-lg)",
+              zIndex:100,
+              overflow:"hidden"
+            }}>
+              <div onClick={() => { onNavigate("settings"); setShowMenu(false); }} style={{ padding:"10px 14px", cursor:"pointer", fontSize:13, borderBottom:"1px solid var(--line-2)", display:"flex", alignItems:"center", gap:8, color:"var(--ink)" }}>
+                <Icon name="settings" size={16} />
+                Settings
+              </div>
+              <div onClick={() => { onLogout(); setShowMenu(false); }} style={{ padding:"10px 14px", cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", gap:8, color:"var(--ink)" }}>
+                <Icon name="logout" size={16} />
+                Sign out
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>
@@ -109,7 +145,7 @@ function RoleSwitcher({ role, onChange }) {
   );
 }
 
-export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigate }) {
+export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigate, company, onLogout }) {
   return (
     <header className="topbar">
       <button className="tb-collapse" onClick={onToggleCollapse} title="Toggle sidebar"><Icon name="panelLeft" size={18} /></button>

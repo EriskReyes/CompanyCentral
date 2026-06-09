@@ -534,12 +534,18 @@ function SetRow({ title, sub, children }) {
   return <div className="set-row"><div className="sr-main"><div className="sr-title">{title}</div>{sub && <div className="sr-sub">{sub}</div>}</div>{children}</div>;
 }
 
-export function Settings({ role, currentUser, onOpenTweaks }) {
+export function Settings({ role, currentUser, onOpenTweaks, company }) {
   const [tab, setTab] = useState("Profile");
   const [toggles, setToggles] = useState({ email:true, push:true, mentions:true, digest:false, twofa:true, sessions:false });
+  const [teamMembers, setTeamMembers] = useState([
+    { id: "E-101", name: "Dana Whitfield", email: "dana@company.com", role: "admin", status: "Active" },
+    { id: "E-102", name: "Marcus Lindell", email: "marcus@company.com", role: "manager", status: "Active" },
+  ]);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMember, setNewMember] = useState({ name: "", email: "", role: "employee" });
   const tg = k => setToggles(s => ({ ...s, [k]: !s[k] }));
   const roleObj = D.ROLES.find(r => r.key === role);
-  const tabs = ["Profile","Notifications","Security","Appearance"].concat(role === "admin" ? ["Workspace"] : []);
+  const tabs = ["Profile","Notifications","Security","Appearance"].concat(role === "admin" ? ["Workspace","Team Management"] : []);
 
   return (
     <div className="page" style={{ maxWidth:980 }}>
@@ -595,11 +601,107 @@ export function Settings({ role, currentUser, onOpenTweaks }) {
 
       {tab === "Workspace" && role === "admin" && (
         <Card title="Workspace" sub="Admin-only settings">
-          <SetRow title="Workspace name" sub="Shown across the app and in emails."><input className="input" defaultValue="WorkCentral Inc." /></SetRow>
-          <SetRow title="Members & roles" sub="142 members · 6 role types"><Btn variant="ghost" sm icon="employees">Manage</Btn></SetRow>
+          <SetRow title="Workspace name" sub="Shown across the app and in emails."><input className="input" defaultValue={company?.name || "WorkCentral Inc."} /></SetRow>
+          <SetRow title="Company ID" sub="Unique identifier for your workspace."><Badge tone="gray">{company?.companyId || "WC-2026-XXXX"}</Badge></SetRow>
+          <SetRow title="Industry" sub="Your company's industry sector."><Badge tone="blue">{company?.industry || "Technology"}</Badge></SetRow>
           <SetRow title="Billing plan" sub="Business · renews Jan 2027"><Badge tone="green" dot>Active</Badge></SetRow>
           <SetRow title="Data export" sub="Export all workspace data."><Btn variant="ghost" sm icon="download">Export</Btn></SetRow>
         </Card>
+      )}
+
+      {tab === "Team Management" && role === "admin" && (
+        <div>
+          <Card title={`Team Members (${teamMembers.length})`} sub="Manage your team and assign roles">
+            <div style={{ marginBottom:20 }}>
+              <Btn variant="primary" icon="plus" onClick={() => setShowAddMember(!showAddMember)}>
+                {showAddMember ? "Cancel" : "Add member"}
+              </Btn>
+            </div>
+
+            {showAddMember && (
+              <div style={{ padding:16, background:'var(--surface-2)', borderRadius:'var(--r-lg)', marginBottom:20, border:'1px solid var(--line)' }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div>
+                    <label className="fieldlabel">Full name</label>
+                    <input
+                      className="input"
+                      style={{ width:"100%" }}
+                      placeholder="Jane Smith"
+                      value={newMember.name}
+                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="fieldlabel">Email</label>
+                    <input
+                      className="input"
+                      type="email"
+                      style={{ width:"100%" }}
+                      placeholder="jane@company.com"
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom:14 }}>
+                  <label className="fieldlabel">Role</label>
+                  <select
+                    className="input"
+                    style={{ width:"100%" }}
+                    value={newMember.role}
+                    onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                  >
+                    <option value="employee">Employee</option>
+                    <option value="manager">Manager</option>
+                    <option value="hr">HR</option>
+                    <option value="lead">Team Leader</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div style={{ padding:12, background:'var(--accent-soft)', borderRadius:'var(--r-md)', fontSize:12.5, color:'var(--accent-ink)', marginBottom:14 }}>
+                  <Icon name="info" size={14} style={{ marginRight:6, verticalAlign:'middle' }} />
+                  A temporary password will be sent to {newMember.email || "the user's email"}
+                </div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <Btn variant="ghost" onClick={() => setShowAddMember(false)}>Cancel</Btn>
+                  <Btn variant="primary" onClick={() => {
+                    if (newMember.name && newMember.email) {
+                      const tempPassword = Math.random().toString(36).slice(2, 10).toUpperCase();
+                      setTeamMembers([...teamMembers, {
+                        id: "E-" + (100 + teamMembers.length),
+                        name: newMember.name,
+                        email: newMember.email,
+                        role: newMember.role,
+                        status: "Invited"
+                      }]);
+                      setNewMember({ name: "", email: "", role: "employee" });
+                      setShowAddMember(false);
+                    }
+                  }}>
+                    Send invite
+                  </Btn>
+                </div>
+              </div>
+            )}
+
+            <Card flush>
+              <table className="table">
+                <thead><tr><th>Member</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {teamMembers.map(member => (
+                    <tr key={member.id}>
+                      <td><Person id={member.id} /></td>
+                      <td className="t-mono" style={{ fontSize:12.5 }}>{member.email}</td>
+                      <td><Badge tone="blue">{D.ROLES.find(r => r.key === member.role)?.name}</Badge></td>
+                      <td><StatusBadge value={member.status} /></td>
+                      <td style={{ textAlign:"right" }}><Btn variant="ghost" sm icon="trash" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </Card>
+        </div>
       )}
     </div>
   );
@@ -704,6 +806,57 @@ export function Attendance({ access }) {
             ))}
           </tbody>
         </table>
+      </Card>
+    </div>
+  );
+}
+
+// ========== DIENSTPLAN ==========
+export function Dienstplan({ onNavigate }) {
+  return (
+    <div className="page">
+      <PageHead title="Dienstplan" sub="Work schedule and shift planning" />
+      <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
+        <Icon name="schedule" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
+        <div style={{ fontSize:20, fontWeight:600, marginBottom:12 }}>Dienstplan</div>
+        <div style={{ fontSize:14, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
+          Manage team work schedules, shifts, and planning. Coming soon.
+        </div>
+        <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
+      </Card>
+    </div>
+  );
+}
+
+// ========== PERSONALREGLEMENT ==========
+export function Personalreglement({ onNavigate }) {
+  return (
+    <div className="page">
+      <PageHead title="Personalreglement" sub="Employee handbook and regulations" />
+      <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
+        <Icon name="book" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
+        <div style={{ fontSize:20, fontWeight:600, marginBottom:12 }}>Personalreglement</div>
+        <div style={{ fontSize:14, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
+          Access company personnel regulations and employee handbook. Coming soon.
+        </div>
+        <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
+      </Card>
+    </div>
+  );
+}
+
+// ========== VADEMECUM ==========
+export function Vademecum({ onNavigate }) {
+  return (
+    <div className="page">
+      <PageHead title="Vademecum" sub="Quick reference guide and procedures" />
+      <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
+        <Icon name="alphabetical" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
+        <div style={{ fontSize:20, fontWeight:600, marginBottom:12 }}>Vademecum</div>
+        <div style={{ fontSize:14, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
+          Quick reference guide with procedures and important information. Coming soon.
+        </div>
+        <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
       </Card>
     </div>
   );

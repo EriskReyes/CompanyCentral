@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar, TopBar } from './layout'
 import { TweaksPanel, TweakSection, TweakColor, TweakRadio, useTweaks } from './tweaks-panel'
 import * as Pages from './pages'
+import { Login, Register } from './pages/Auth'
 import { EMP, NAV, ROLES, getAccess } from './data'
 import './index.css'
 
@@ -46,6 +47,9 @@ const PAGES = {
   meetings: Pages.Meetings,
   notifications: Pages.Notifications,
   settings: Pages.Settings,
+  dienstplan: Pages.Dienstplan,
+  personalreglement: Pages.Personalreglement,
+  vademecum: Pages.Vademecum,
 };
 
 export default function App() {
@@ -53,8 +57,19 @@ export default function App() {
   const [route, setRoute] = useState(() => location.hash.replace("#", "") || "dashboard");
   const [role, setRole] = useState("admin");
   const [collapsed, setCollapsed] = useState(false);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken'));
+  const [currentUserData, setCurrentUserData] = useState(() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [companyData, setCompanyData] = useState(() => {
+    const stored = localStorage.getItem('company');
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [authMode, setAuthMode] = useState("login");
 
-  const currentUser = USER_BY_ROLE[role] || GUEST;
+  const isAuthenticated = !!authToken && !!currentUserData && !!companyData;
+  const currentUser = currentUserData || USER_BY_ROLE[role] || GUEST;
 
   // Apply tweaks to :root
   useEffect(() => {
@@ -79,11 +94,47 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  const handleLogin = ({ token, user, company }) => {
+    setAuthToken(token);
+    setCurrentUserData(user);
+    setCompanyData(company);
+    setRoute("dashboard");
+    location.hash = "dashboard";
+  };
+
+  const handleRegister = ({ token, user, company }) => {
+    setAuthToken(token);
+    setCurrentUserData(user);
+    setCompanyData(company);
+    setRoute("dashboard");
+    location.hash = "dashboard";
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('company');
+    setAuthToken(null);
+    setCurrentUserData(null);
+    setCompanyData(null);
+    setRoute("dashboard");
+    location.hash = "";
+    setAuthMode("login");
+  };
+
   const navigate = (key) => {
     setRoute(key);
     location.hash = key;
     document.querySelector(".content")?.scrollTo(0, 0);
   };
+
+  if (!isAuthenticated) {
+    return authMode === "login" ? (
+      <Login onLogin={handleLogin} />
+    ) : (
+      <Register onRegister={handleRegister} />
+    );
+  }
 
   const handleRequestPermission = (pageLabel, userRole) => {
     setPermissionRequest({ pageLabel, userRole, timestamp: new Date().toLocaleString() });
@@ -95,20 +146,37 @@ export default function App() {
 
   return (
     <div className="app" data-collapsed={collapsed}>
-      <Sidebar active={route} onNavigate={navigate} collapsed={collapsed} role={role} currentUser={currentUser} />
+      <Sidebar
+        active={route}
+        onNavigate={navigate}
+        collapsed={collapsed}
+        role={currentUserData?.role || role}
+        currentUser={currentUser}
+        company={companyData}
+        onLogout={handleLogout}
+      />
       <div className="main">
         <TopBar
           title={NAV_LABEL[route] || "Dashboard"}
-          crumb={route === "dashboard" ? null : "WorkCentral"}
-          role={role}
-          onRole={setRole}
+          crumb={route === "dashboard" ? companyData?.name : "WorkCentral"}
+          role={currentUserData?.role || role}
+          onRole={(r) => setRole(r)}
           onToggleCollapse={() => setCollapsed(c => !c)}
           onNavigate={navigate}
+          company={companyData}
+          onLogout={handleLogout}
         />
         <div className="content">
           {access === "none"
-            ? <Pages.LockedPage pageLabel={NAV_LABEL[route]} role={role} onNavigate={navigate} onRequestPermission={handleRequestPermission} />
-            : <Page role={role} access={access} currentUser={currentUser} onNavigate={navigate} onOpenTweaks={() => document.querySelector(".tweaks-panel")?.classList.toggle("open")} />}
+            ? <Pages.LockedPage pageLabel={NAV_LABEL[route]} role={currentUserData?.role || role} onNavigate={navigate} onRequestPermission={handleRequestPermission} />
+            : <Page
+                role={currentUserData?.role || role}
+                access={access}
+                currentUser={currentUser}
+                company={companyData}
+                onNavigate={navigate}
+                onOpenTweaks={() => document.querySelector(".tweaks-panel")?.classList.toggle("open")}
+              />}
           {permissionRequest && (
             <div className="permission-toast">
               <div style={{ fontWeight: 600, marginBottom: 4 }}>Access Request Sent</div>

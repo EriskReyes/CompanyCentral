@@ -64,6 +64,8 @@ const P = {
   target: <><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></>,
   zap: <path d="M13 3 5 13h5l-1 8 8-10h-5z"/>,
   info: <><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></>,
+  book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17h11A2.5 2.5 0 0 1 20 19.5v.006H4v-.006z"/><path d="M6.5 2h11A2.5 2.5 0 0 1 20 4.5v9A2.5 2.5 0 0 1 17.5 16h-11A2.5 2.5 0 0 1 4 13.5v-9A2.5 2.5 0 0 1 6.5 2z"/></>,
+  alphabetical: <><path d="M6 4h3l2.5 7.5L14 4h3M9 11v9M15 11l-1.5 4.5 1.5 4.5h-3"/></>,
 };
 
 export function Icon({ name, size = 18, stroke = 1.7, className = "", style, fill }) {
