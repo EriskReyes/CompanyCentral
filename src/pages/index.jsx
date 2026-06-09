@@ -1,10 +1,12 @@
 import Dashboard from './Dashboard';
 import { Icon } from '../icons';
 import { Btn } from '../ui';
+import { Login, Register } from './Auth';
 import {
   Projects, Tasks, Employees, Departments, Teams, Schedule, Attendance,
   Documents, Files, Announcements, Clients, Invoices, Reports,
-  Messages, Meetings, Notifications, Settings
+  Messages, Meetings, Notifications, Settings,
+  Dienstplan, Personalreglement, Vademecum
 } from './Pages';
 
 export function LockedPage({ pageLabel, role, onNavigate, onRequestPermission }) {
@@ -36,5 +38,6 @@ export function LockedPage({ pageLabel, role, onNavigate, onRequestPermission })
 export {
   Dashboard, Employees, Departments, Teams, Projects, Tasks, Schedule, Attendance,
   Documents, Files, Announcements, Clients, Invoices, Reports, Messages, Meetings,
-  Notifications, Settings,
+  Notifications, Settings, Dienstplan, Personalreglement, Vademecum,
+  Login, Register,
 };

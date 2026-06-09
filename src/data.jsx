@@ -28,6 +28,9 @@ export const NAV = [
     { key: "documents", label: "Documents", icon: "documents" },
     { key: "files", label: "Files", icon: "files" },
     { key: "announcements", label: "Announcements", icon: "announcements" },
+    { key: "dienstplan", label: "Dienstplan", icon: "schedule" },
+    { key: "personalreglement", label: "Personalreglement", icon: "book" },
+    { key: "vademecum", label: "Vademecum", icon: "alphabetical" },
   ]},
   { group: "Business", items: [
     { key: "clients", label: "Clients", icon: "clients" },
@@ -64,6 +67,9 @@ const ACCESS = {
   meetings:      { full: ["admin","manager","hr","lead","employee"], view: ["guest"] },
   notifications: { full: ["admin","manager","hr","lead","employee"], view: ["guest"] },
   settings:      { full: ["admin","manager","hr","lead","employee"], view: ["guest"] },
+  dienstplan:    { full: ["admin","hr","manager","lead"], view: ["employee","guest"] },
+  personalreglement: { full: ["admin","hr"], view: ["manager","lead","employee","guest"] },
+  vademecum:     { full: ["admin","hr","manager","lead","employee"], view: ["guest"] },
 };
 
 export function getAccess(role, key) {
@@ -280,3 +286,17 @@ export const THREADS = [
   { id:"E-101", last:"Great work on the migration plan.", time:"Mon", unread:0, online:true,
     msgs:[["E-101","Great work on the migration plan.","10:05"]] },
 ];
+
+// Multi-tenancy utilities
+export function generateCompanyId() {
+  const year = new Date().getFullYear();
+  const randomStr = Math.random().toString(36).substr(2, 4).toUpperCase();
+  return `WC-${year}-${randomStr}`;
+}
+
+export function filterByCompanyId(data, companyId) {
+  if (!companyId || !data) return data;
+  // En una app con backend, aquí se filtraría por el campo companyId
+  // Por ahora devolvemos los datos tal cual para modo demo
+  return data;
+}
