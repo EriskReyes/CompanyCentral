@@ -36,11 +36,11 @@ export function Login({ onLogin }) {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--surface)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Left Panel - Real Office Photo */}
       <div style={{
         flex: '0 0 50%',
-        background: '#f8fafc',
+        background: 'var(--surface-2)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -67,7 +67,7 @@ export function Login({ onLogin }) {
         justifyContent: 'center',
         alignItems: 'center',
         padding: '60px 50px',
-        background: '#fafbfc',
+        background: 'var(--bg)',
         backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px)',
         overflow: 'auto'
       }}>
@@ -79,14 +79,14 @@ export function Login({ onLogin }) {
               <div style={{
                 width: '44px',
                 height: '44px',
-                background: '#047857',
+                background: 'var(--accent)',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
                 fontSize: '24px',
-                color: '#ffffff',
+                color: 'var(--surface)',
                 letterSpacing: '-2px'
               }}>
                 W
@@ -94,7 +94,7 @@ export function Login({ onLogin }) {
               <h1 style={{
                 fontSize: '26px',
                 fontWeight: '700',
-                color: '#0f172a',
+                color: 'var(--ink)',
                 margin: '0',
                 letterSpacing: '-0.5px'
               }}>
@@ -106,7 +106,7 @@ export function Login({ onLogin }) {
             <h2 style={{
               fontSize: '32px',
               fontWeight: '700',
-              color: '#0f172a',
+              color: 'var(--ink)',
               margin: '0 0 12px 0',
               lineHeight: '1.2'
             }}>
@@ -116,7 +116,7 @@ export function Login({ onLogin }) {
             {/* Subheading */}
             <p style={{
               fontSize: '15px',
-              color: '#64748b',
+              color: 'var(--ink-3)',
               margin: '0',
               lineHeight: '1.6',
               fontWeight: '400'
@@ -130,11 +130,11 @@ export function Login({ onLogin }) {
             <div style={{
               marginBottom: '20px',
               padding: '12px 14px',
-              background: '#fee2e2',
+              background: 'var(--red-soft)',
               border: '1px solid #fecaca',
               borderRadius: '6px',
               fontSize: '13px',
-              color: '#991b1b'
+              color: 'var(--red)'
             }}>
               {error}
             </div>
@@ -148,7 +148,7 @@ export function Login({ onLogin }) {
                 display: 'block',
                 fontSize: '13px',
                 fontWeight: '600',
-                color: '#0f172a',
+                color: 'var(--ink)',
                 marginBottom: '8px'
               }}>
                 Email address
@@ -166,10 +166,10 @@ export function Login({ onLogin }) {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontFamily: 'inherit',
-                  background: '#ffffff',
+                  background: 'var(--surface)',
                   outline: 'none',
                   boxSizing: 'border-box',
-                  color: '#0f172a'
+                  color: 'var(--ink)'
                 }}
               />
             </div>
@@ -180,7 +180,7 @@ export function Login({ onLogin }) {
                 display: 'block',
                 fontSize: '13px',
                 fontWeight: '600',
-                color: '#0f172a',
+                color: 'var(--ink)',
                 marginBottom: '8px'
               }}>
                 Password
@@ -198,10 +198,10 @@ export function Login({ onLogin }) {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontFamily: 'inherit',
-                  background: '#ffffff',
+                  background: 'var(--surface)',
                   outline: 'none',
                   boxSizing: 'border-box',
-                  color: '#0f172a'
+                  color: 'var(--ink)'
                 }}
               />
             </div>
@@ -214,8 +214,8 @@ export function Login({ onLogin }) {
                 width: '100%',
                 padding: '11px 16px',
                 marginTop: '8px',
-                background: '#047857',
-                color: '#ffffff',
+                background: 'var(--accent)',
+                color: 'var(--surface)',
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -227,6 +227,35 @@ export function Login({ onLogin }) {
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
+            
+            {/* Dev Quick Login Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                const mockUser = { id: "E-101", name: "Dana Whitfield", email: "dana@workcentral.io", role: "admin" };
+                const mockCompany = { companyId: "WC-DEV-TEST", name: "Development Inc." };
+                localStorage.setItem('authToken', 'dev-mock-token');
+                localStorage.setItem('user', JSON.stringify(mockUser));
+                localStorage.setItem('company', JSON.stringify(mockCompany));
+                onLogin({ token: 'dev-mock-token', user: mockUser, company: mockCompany });
+              }}
+              style={{
+                width: '100%',
+                padding: '11px 16px',
+                marginTop: '8px',
+                background: 'var(--blue)',
+                color: 'var(--surface)',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'none'
+              }}
+            >
+              🛠 Dev: Quick Login (Admin)
+            </button>
           </form>
 
           {/* Divider */}
@@ -236,16 +265,16 @@ export function Login({ onLogin }) {
             alignItems: 'center',
             gap: '12px'
           }}>
-            <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+            <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
             <span style={{
               fontSize: '13px',
-              color: '#94a3b8',
+              color: 'var(--muted)',
               fontWeight: '500',
               whiteSpace: 'nowrap'
             }}>
               New here?
             </span>
-            <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+            <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
           </div>
 
           {/* Sign Up Button */}
@@ -254,8 +283,8 @@ export function Login({ onLogin }) {
             style={{
               width: '100%',
               padding: '11px 16px',
-              background: '#f1f5f9',
-              color: '#0f172a',
+              background: 'var(--surface-2)',
+              color: 'var(--ink)',
               border: '1px solid #cbd5e0',
               borderRadius: '6px',
               fontSize: '14px',
@@ -270,18 +299,18 @@ export function Login({ onLogin }) {
           {/* Footer */}
           <p style={{
             fontSize: '11px',
-            color: '#94a3b8',
+            color: 'var(--muted)',
             textAlign: 'center',
             margin: '32px 0 0 0',
             lineHeight: '1.5',
             fontWeight: '400'
           }}>
             By signing in, you agree to our{' '}
-            <span style={{ color: '#0f172a', textDecoration: 'underline', cursor: 'pointer' }}>
+            <span style={{ color: 'var(--ink)', textDecoration: 'underline', cursor: 'pointer' }}>
               Terms of Service
             </span>
             {' '}and{' '}
-            <span style={{ color: '#0f172a', textDecoration: 'underline', cursor: 'pointer' }}>
+            <span style={{ color: 'var(--ink)', textDecoration: 'underline', cursor: 'pointer' }}>
               Privacy Policy
             </span>
           </p>
@@ -352,11 +381,11 @@ export function Register({ onRegister }) {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--surface)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Left Panel - Real Office Photo */}
       <div style={{
         flex: '0 0 50%',
-        background: '#f8fafc',
+        background: 'var(--surface-2)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -383,7 +412,7 @@ export function Register({ onRegister }) {
         justifyContent: 'center',
         alignItems: 'center',
         padding: '60px 50px',
-        background: '#fafbfc',
+        background: 'var(--bg)',
         backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px)',
         overflow: 'auto'
       }}>
@@ -394,14 +423,14 @@ export function Register({ onRegister }) {
               <div style={{
                 width: '44px',
                 height: '44px',
-                background: '#047857',
+                background: 'var(--accent)',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
                 fontSize: '24px',
-                color: '#ffffff',
+                color: 'var(--surface)',
                 letterSpacing: '-2px'
               }}>
                 W
@@ -409,7 +438,7 @@ export function Register({ onRegister }) {
               <h1 style={{
                 fontSize: '26px',
                 fontWeight: '700',
-                color: '#0f172a',
+                color: 'var(--ink)',
                 margin: '0',
                 letterSpacing: '-0.5px'
               }}>
@@ -423,21 +452,21 @@ export function Register({ onRegister }) {
                 <div style={{
                   flex: 1,
                   height: '4px',
-                  background: step >= 1 ? '#047857' : '#e2e8f0',
+                  background: step >= 1 ? 'var(--accent)' : 'var(--line)',
                   borderRadius: '2px',
                   transition: 'none'
                 }} />
                 <div style={{
                   flex: 1,
                   height: '4px',
-                  background: step >= 2 ? '#047857' : '#e2e8f0',
+                  background: step >= 2 ? 'var(--accent)' : 'var(--line)',
                   borderRadius: '2px',
                   transition: 'none'
                 }} />
               </div>
               <p style={{
                 fontSize: '12px',
-                color: '#64748b',
+                color: 'var(--ink-3)',
                 margin: '0',
                 fontWeight: '500'
               }}>
@@ -448,7 +477,7 @@ export function Register({ onRegister }) {
             <h2 style={{
               fontSize: '28px',
               fontWeight: '700',
-              color: '#0f172a',
+              color: 'var(--ink)',
               margin: '0 0 8px 0',
               lineHeight: '1.3'
             }}>
@@ -456,7 +485,7 @@ export function Register({ onRegister }) {
             </h2>
             <p style={{
               fontSize: '14px',
-              color: '#64748b',
+              color: 'var(--ink-3)',
               margin: '0',
               lineHeight: '1.5',
               fontWeight: '400'
@@ -470,11 +499,11 @@ export function Register({ onRegister }) {
             <div style={{
               marginBottom: '20px',
               padding: '12px 14px',
-              background: '#fee2e2',
+              background: 'var(--red-soft)',
               border: '1px solid #fecaca',
               borderRadius: '6px',
               fontSize: '13px',
-              color: '#991b1b'
+              color: 'var(--red)'
             }}>
               {error}
             </div>
@@ -490,7 +519,7 @@ export function Register({ onRegister }) {
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: '600',
-                    color: '#0f172a',
+                    color: 'var(--ink)',
                     marginBottom: '8px'
                   }}>
                     Company name
@@ -508,10 +537,10 @@ export function Register({ onRegister }) {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontFamily: 'inherit',
-                      background: '#ffffff',
+                      background: 'var(--surface)',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#0f172a'
+                      color: 'var(--ink)'
                     }}
                   />
                 </div>
@@ -522,7 +551,7 @@ export function Register({ onRegister }) {
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: '600',
-                    color: '#0f172a',
+                    color: 'var(--ink)',
                     marginBottom: '8px'
                   }}>
                     Industry
@@ -538,10 +567,10 @@ export function Register({ onRegister }) {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontFamily: 'inherit',
-                      background: '#ffffff',
+                      background: 'var(--surface)',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#0f172a'
+                      color: 'var(--ink)'
                     }}
                   >
                     <option value="">Select an industry</option>
@@ -559,7 +588,7 @@ export function Register({ onRegister }) {
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: '600',
-                    color: '#0f172a',
+                    color: 'var(--ink)',
                     marginBottom: '8px'
                   }}>
                     Full name
@@ -577,10 +606,10 @@ export function Register({ onRegister }) {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontFamily: 'inherit',
-                      background: '#ffffff',
+                      background: 'var(--surface)',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#0f172a'
+                      color: 'var(--ink)'
                     }}
                   />
                 </div>
@@ -591,7 +620,7 @@ export function Register({ onRegister }) {
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: '600',
-                    color: '#0f172a',
+                    color: 'var(--ink)',
                     marginBottom: '8px'
                   }}>
                     Email address
@@ -609,10 +638,10 @@ export function Register({ onRegister }) {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontFamily: 'inherit',
-                      background: '#ffffff',
+                      background: 'var(--surface)',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#0f172a'
+                      color: 'var(--ink)'
                     }}
                   />
                 </div>
@@ -623,7 +652,7 @@ export function Register({ onRegister }) {
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: '600',
-                    color: '#0f172a',
+                    color: 'var(--ink)',
                     marginBottom: '8px'
                   }}>
                     Password
@@ -641,10 +670,10 @@ export function Register({ onRegister }) {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontFamily: 'inherit',
-                      background: '#ffffff',
+                      background: 'var(--surface)',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#0f172a'
+                      color: 'var(--ink)'
                     }}
                   />
                 </div>
@@ -655,7 +684,7 @@ export function Register({ onRegister }) {
                     display: 'block',
                     fontSize: '13px',
                     fontWeight: '600',
-                    color: '#0f172a',
+                    color: 'var(--ink)',
                     marginBottom: '8px'
                   }}>
                     Confirm password
@@ -673,10 +702,10 @@ export function Register({ onRegister }) {
                       borderRadius: '6px',
                       fontSize: '14px',
                       fontFamily: 'inherit',
-                      background: '#ffffff',
+                      background: 'var(--surface)',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      color: '#0f172a'
+                      color: 'var(--ink)'
                     }}
                   />
                 </div>
@@ -696,8 +725,8 @@ export function Register({ onRegister }) {
                   style={{
                     flex: 1,
                     padding: '11px 16px',
-                    background: '#f1f5f9',
-                    color: '#0f172a',
+                    background: 'var(--surface-2)',
+                    color: 'var(--ink)',
                     border: '1px solid #cbd5e0',
                     borderRadius: '6px',
                     fontSize: '14px',
@@ -715,8 +744,8 @@ export function Register({ onRegister }) {
                 style={{
                   flex: 1,
                   padding: '11px 16px',
-                  background: '#047857',
-                  color: '#ffffff',
+                  background: 'var(--accent)',
+                  color: 'var(--surface)',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -734,7 +763,7 @@ export function Register({ onRegister }) {
           {/* Sign In Link */}
           <p style={{
             fontSize: '13px',
-            color: '#64748b',
+            color: 'var(--ink-3)',
             textAlign: 'center',
             margin: '24px 0 0 0'
           }}>
@@ -742,7 +771,7 @@ export function Register({ onRegister }) {
             <span
               onClick={() => window.location.hash = '#login'}
               style={{
-                color: '#047857',
+                color: 'var(--accent)',
                 cursor: 'pointer',
                 fontWeight: '600',
                 textDecoration: 'none'
