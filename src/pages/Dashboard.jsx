@@ -6,13 +6,13 @@ import * as D from '../data';
 function MiniProjectRow({ p, onOpen }) {
   return (
     <div className="lrow clickable" style={{ cursor:"pointer" }} onClick={() => onOpen("projects")}>
-      <div className="tile-ico" style={{ background:"var(--surface-2)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:11, fontWeight:600, color:"var(--ink-2)" }}>{p.code.slice(0,3)}</div>
+      <div className="tile-ico" style={{ background:"var(--surface-2)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize: 13, fontWeight:600, color:"var(--ink-2)" }}>{p.code.slice(0,3)}</div>
       <div className="lr-main">
         <div className="lr-title">{p.name}</div>
         <div className="lr-sub">{p.done}/{p.total} tasks · due {p.due}</div>
       </div>
       <div style={{ width:120 }}><Progress value={p.progress} thin /></div>
-      <div className="mono" style={{ width:38, textAlign:"right", fontSize:12.5, fontWeight:600 }}>{p.progress}%</div>
+      <div className="mono" style={{ width:38, textAlign:"right", fontSize: 14.5, fontWeight:600 }}>{p.progress}%</div>
       <StatusBadge value={p.status} />
     </div>
   );
@@ -22,7 +22,7 @@ function DocRow({ d }) {
   const [bg, fg] = D.DOC_COLORS[d.kind] || ["#eef1f4","#475569"];
   return (
     <div className="lrow">
-      <div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize:10, fontWeight:700 }}>{d.kind}</div>
+      <div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize: 12, fontWeight:700 }}>{d.kind}</div>
       <div className="lr-main">
         <div className="lr-title">{d.name}</div>
         <div className="lr-sub">{D.empById[d.owner]?.name.split(" ")[0]} · {d.updated}</div>

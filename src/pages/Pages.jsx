@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Icon } from '../icons';
 import { Card, Btn, Badge, StatusBadge, Priority, Progress, Avatar, AvatarStack, Person, Search, Select, Seg, Tabs, PageHead, EmptyState, BarChart, Donut } from '../ui';
 import * as D from '../data';
@@ -22,7 +22,7 @@ export function Projects({ access }) {
         <Search placeholder="Search projects…" value={q} onChange={setQ} />
         <Select value={status} options={["All","Planning","On track","At risk","Delayed","Completed"]} onChange={setStatus} />
         <div style={{ flex:1 }} />
-        <span className="muted" style={{ fontSize:12.5 }}>{list.length} projects</span>
+        <span className="muted" style={{ fontSize: 14.5 }}>{list.length} projects</span>
       </div>
       {view === "List" ? (
         <Card flush>
@@ -34,15 +34,15 @@ export function Projects({ access }) {
               <tbody>
                 {list.map(p => (<tr key={p.id} className="clickable">
                   <td><div style={{ display:"flex", alignItems:"center", gap:11 }}>
-                    <div className="tile-ico" style={{ background:"var(--surface-2)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize:10, fontWeight:700, color:"var(--accent-ink)", width:34, height:34 }}>{p.code.slice(0,3)}</div>
-                    <div style={{ minWidth:0 }}><div className="t-strong" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:230 }}>{p.name}</div><div className="muted" style={{ fontSize:11.5 }}>{p.id}{p.client && " · "+p.client}</div></div>
+                    <div className="tile-ico" style={{ background:"var(--surface-2)", border:"1px solid var(--line)", fontFamily:"var(--mono)", fontSize: 12, fontWeight:700, color:"var(--accent-ink)", width:34, height:34 }}>{p.code.slice(0,3)}</div>
+                    <div style={{ minWidth:0 }}><div className="t-strong" style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:230 }}>{p.name}</div><div className="muted" style={{ fontSize: 13.5 }}>{p.id}{p.client && " · "+p.client}</div></div>
                   </div></td>
                   <td><Avatar id={p.lead} size={28} /></td>
                   <td>{p.team}</td>
                   <td><AvatarStack ids={p.members} size={26} max={3} /></td>
-                  <td><div style={{ display:"flex", alignItems:"center", gap:9 }}><div style={{ flex:1 }}><Progress value={p.progress} thin /></div><span className="mono" style={{ fontSize:12, fontWeight:600, width:34, textAlign:"right" }}>{p.progress}%</span></div></td>
+                  <td><div style={{ display:"flex", alignItems:"center", gap:9 }}><div style={{ flex:1 }}><Progress value={p.progress} thin /></div><span className="mono" style={{ fontSize: 14, fontWeight:600, width:34, textAlign:"right" }}>{p.progress}%</span></div></td>
                   <td><Priority value={p.priority} /></td>
-                  <td className="t-mono" style={{ fontSize:12.5 }}>{p.due}</td>
+                  <td className="t-mono" style={{ fontSize: 14.5 }}>{p.due}</td>
                   <td><StatusBadge value={p.status} /></td>
                 </tr>))}
               </tbody>
@@ -56,19 +56,19 @@ export function Projects({ access }) {
             return (<div key={col} style={{ background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:"var(--r-lg)", padding:10, minHeight:120 }}>
               <div style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 6px 10px" }}>
                 <StatusBadge value={col} />
-                <span className="muted mono" style={{ fontSize:12, marginLeft:"auto" }}>{items.length}</span>
+                <span className="muted mono" style={{ fontSize: 14, marginLeft:"auto" }}>{items.length}</span>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
                 {items.map(p => (<div key={p.id} className="card" style={{ padding:13, boxShadow:"var(--sh-xs)", cursor:"pointer" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:7 }}>
-                    <span className="mono" style={{ fontSize:10.5, fontWeight:700, color:"var(--accent-ink)" }}>{p.code}</span>
+                    <span className="mono" style={{ fontSize: 12.5, fontWeight:700, color:"var(--accent-ink)" }}>{p.code}</span>
                     <Priority value={p.priority} />
                   </div>
-                  <div style={{ fontSize:13, fontWeight:600, marginBottom:10, lineHeight:1.3 }}>{p.name}</div>
+                  <div style={{ fontSize: 15, fontWeight:600, marginBottom:10, lineHeight:1.3 }}>{p.name}</div>
                   <Progress value={p.progress} thin />
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:11 }}>
                     <AvatarStack ids={p.members} size={24} max={3} />
-                    <span className="muted" style={{ fontSize:11 }}>{p.due}</span>
+                    <span className="muted" style={{ fontSize: 13 }}>{p.due}</span>
                   </div>
                 </div>))}
               </div>
@@ -101,7 +101,7 @@ export function Tasks({ access, role, currentUser }) {
         <Select value={proj} options={projOpts} onChange={setProj} />
         {personal && <Badge tone="teal" dot>Showing your tasks</Badge>}
         <div style={{ flex:1 }} />
-        <span className="muted" style={{ fontSize:12.5 }}>{list.length} tasks</span>
+        <span className="muted" style={{ fontSize: 14.5 }}>{list.length} tasks</span>
       </div>
       {view === "Board" ? (
         <div style={{ display:"grid", gridTemplateColumns:`repeat(${cols.length},1fr)`, gap:14, alignItems:"start" }}>
@@ -109,27 +109,27 @@ export function Tasks({ access, role, currentUser }) {
             const items = list.filter(t => t.status === col);
             return (<div key={col} style={{ background:"var(--surface-2)", border:"1px solid var(--line)", borderRadius:"var(--r-lg)", padding:10, minHeight:140 }}>
               <div style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 6px 10px" }}>
-                <StatusBadge value={col} dot /><span className="muted mono" style={{ fontSize:12, marginLeft:"auto" }}>{items.length}</span>
+                <StatusBadge value={col} dot /><span className="muted mono" style={{ fontSize: 14, marginLeft:"auto" }}>{items.length}</span>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
                 {items.map(t => (<div key={t.id} className="card" style={{ padding:12, boxShadow:"var(--sh-xs)", cursor:"pointer" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                    <span className="mono" style={{ fontSize:10, color:"var(--muted)" }}>{t.id}</span>
+                    <span className="mono" style={{ fontSize: 12, color:"var(--muted)" }}>{t.id}</span>
                     <Priority value={t.priority} />
                   </div>
-                  <div style={{ fontSize:12.5, fontWeight:500, lineHeight:1.4, marginBottom:10 }}>{t.title}</div>
+                  <div style={{ fontSize: 14.5, fontWeight:500, lineHeight:1.4, marginBottom:10 }}>{t.title}</div>
                   <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:10 }}>
                     {t.tags.map(tg => <span key={tg} className="tag-soft">{tg}</span>)}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <span className="mono muted" style={{ fontSize:10.5 }}>{D.projById[t.proj]?.code}</span>
+                    <span className="mono muted" style={{ fontSize: 12.5 }}>{D.projById[t.proj]?.code}</span>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span className="muted" style={{ fontSize:11 }}>{t.due}</span>
+                      <span className="muted" style={{ fontSize: 13 }}>{t.due}</span>
                       <Avatar id={t.assignee} size={22} />
                     </div>
                   </div>
                 </div>))}
-                {items.length === 0 && <div style={{ padding:"16px 6px", textAlign:"center", color:"var(--muted)", fontSize:12 }}>No tasks</div>}
+                {items.length === 0 && <div style={{ padding:"16px 6px", textAlign:"center", color:"var(--muted)", fontSize: 14 }}>No tasks</div>}
               </div>
             </div>);
           })}
@@ -140,12 +140,12 @@ export function Tasks({ access, role, currentUser }) {
             <thead><tr><th>Task</th><th>Project</th><th>Assignee</th><th>Tags</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead>
             <tbody>
               {list.map(t => (<tr key={t.id} className="clickable">
-                <td><div className="t-strong">{t.title}</div><div className="muted mono" style={{ fontSize:11 }}>{t.id}</div></td>
+                <td><div className="t-strong">{t.title}</div><div className="muted mono" style={{ fontSize: 13 }}>{t.id}</div></td>
                 <td>{D.projById[t.proj]?.code}</td>
                 <td><Avatar id={t.assignee} size={26} /></td>
                 <td><div style={{ display:"flex", gap:5 }}>{t.tags.map(tg => <span key={tg} className="tag-soft">{tg}</span>)}</div></td>
                 <td><Priority value={t.priority} /></td>
-                <td className="t-mono" style={{ fontSize:12.5 }}>{t.due}</td>
+                <td className="t-mono" style={{ fontSize: 14.5 }}>{t.due}</td>
                 <td><StatusBadge value={t.status} /></td>
               </tr>))}
             </tbody>
@@ -171,7 +171,7 @@ export function Employees() {
         <Search placeholder="Search employees…" value={q} onChange={setQ} />
         <Select value={dept} options={deptOpts} onChange={setDept} />
         <div style={{ flex:1 }} />
-        <span className="muted" style={{ fontSize:12.5 }}>{list.length} employees</span>
+        <span className="muted" style={{ fontSize: 14.5 }}>{list.length} employees</span>
       </div>
       <Card flush>
         <table className="table">
@@ -179,11 +179,11 @@ export function Employees() {
           <tbody>
             {list.map(e => (<tr key={e.id}>
               <td><Person id={e.id} /></td>
-              <td style={{ fontSize:13 }}>{e.title}</td>
+              <td style={{ fontSize: 15 }}>{e.title}</td>
               <td>{e.dept}</td>
               <td>{e.team}</td>
               <td><StatusBadge value={e.status} /></td>
-              <td className="t-mono" style={{ fontSize:12.5 }}>{e.email}</td>
+              <td className="t-mono" style={{ fontSize: 14.5 }}>{e.email}</td>
             </tr>))}
           </tbody>
         </table>
@@ -201,7 +201,7 @@ export function Departments() {
       <div className="grid cols-3" style={{ marginBottom:"var(--gap)" }}>
         {D.DEPT.map(d => (<Card key={d.name} title={d.name} sub={`${d.count} people · ${d.open} open positions`}
           actions={<Avatar id={d.lead} size={28} />}>
-          <div style={{ fontSize:13, color:"var(--ink-2)", lineHeight:1.6 }}>
+          <div style={{ fontSize: 15, color:"var(--ink-2)", lineHeight:1.6 }}>
             <div>Lead: <strong>{D.empById[d.lead]?.name}</strong></div>
             <div>Team members: <strong>{d.count}</strong></div>
             <div>Open roles: <strong>{d.open}</strong></div>
@@ -220,10 +220,10 @@ export function Teams() {
       <div className="grid cols-2" style={{ marginBottom:"var(--gap)" }}>
         {D.TEAMS.map(t => (<Card key={t.name} title={t.name} sub={t.focus}
           actions={<Avatar id={t.lead} size={28} />}>
-          <div style={{ fontSize:13, lineHeight:1.8 }}>
+          <div style={{ fontSize: 15, lineHeight:1.8 }}>
             <div><span className="muted">Department:</span> {t.dept}</div>
             <div><span className="muted">Members:</span></div>
-            {t.members.map(m => <div key={m} className="muted" style={{ fontSize:12, paddingLeft:16 }}>→ {D.empById[m]?.name}</div>)}
+            {t.members.map(m => <div key={m} className="muted" style={{ fontSize: 14, paddingLeft:16 }}>→ {D.empById[m]?.name}</div>)}
           </div>
         </Card>))}
       </div>
@@ -236,6 +236,23 @@ export function Documents() {
   const [q, setQ] = useState("");
   const list = D.DOCS.filter(d => q === "" || d.name.toLowerCase().includes(q.toLowerCase()));
 
+  const handleDownload = (doc) => {
+    const content = "Contenido de prueba para el documento: " + doc.name;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.name.replace(/\s+/g, '_') + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleView = (doc) => {
+    alert(`👁️ Viendo documento:\n\nNombre: ${doc.name}\nTipo: ${doc.kind}\nTamaño: ${doc.size}\n\n(Esta es una vista previa de prueba)`);
+  };
+
   return (
     <div className="page">
       <PageHead title="Documents" sub={`${D.DOCS.length} documents`}
@@ -243,19 +260,23 @@ export function Documents() {
       <div className="filterbar" style={{ marginBottom:"var(--gap)" }}>
         <Search placeholder="Search documents…" value={q} onChange={setQ} />
         <div style={{ flex:1 }} />
-        <span className="muted" style={{ fontSize:12.5 }}>{list.length} documents</span>
+        <span className="muted" style={{ fontSize: 14.5 }}>{list.length} documents</span>
       </div>
       <Card flush>
         {list.map(d => {
           const [bg, fg] = D.DOC_COLORS[d.kind] || ["#eef1f4","#475569"];
-          return (<div key={d.id} className="lrow">
-            <div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize:10, fontWeight:700 }}>{d.kind}</div>
+          return (<div key={d.id} className="lrow" style={{ display:"flex", alignItems:"center" }}>
+            <div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize: 12, fontWeight:700 }}>{d.kind}</div>
             <div className="lr-main">
               <div className="lr-title">{d.name}</div>
               <div className="lr-sub">{D.empById[d.owner]?.name} · {d.updated}</div>
             </div>
-            <div style={{ color:"var(--muted)", fontSize:12 }}>{d.size}</div>
-            <Badge tone={d.shared ? "green" : "gray"} dot>{d.shared ? "Shared" : "Private"}</Badge>
+            <div style={{ color:"var(--muted)", fontSize: 14, marginRight: 20 }}>{d.size}</div>
+            <Badge tone={d.shared ? "green" : "gray"} dot style={{ marginRight: 20 }}>{d.shared ? "Shared" : "Private"}</Badge>
+            <div style={{ display:"flex", gap:8 }}>
+              <Btn variant="ghost" sm icon="eye" onClick={() => handleView(d)} />
+              <Btn variant="ghost" sm icon="download" onClick={() => handleDownload(d)} />
+            </div>
           </div>);
         })}
       </Card>
@@ -270,27 +291,45 @@ export function Files({ access }) {
     { name:"Product Specs", count:31, color:"#6d54d6" }, { name:"People & HR", count:22, color:"#15935f" },
     { name:"Brand & Marketing", count:64, color:"#c2790a" }, { name:"Contracts", count:18, color:"#b3543f" },
   ];
+
+  const handleDownload = (doc) => {
+    const content = "Contenido de prueba para el archivo: " + doc.name;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.name.replace(/\s+/g, '_') + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleView = (doc) => {
+    alert(`👁️ Viendo archivo:\n\nNombre: ${doc.name}\nTipo: ${doc.kind}\nTamaño: ${doc.size}\n\n(Vista previa de prueba)`);
+  };
+
   return (
     <div className="page">
       <PageHead title="Files" sub="Shared company file storage · 2.4 GB of 10 GB used"
         actions={access === "full" ? <><Btn variant="ghost" icon="folder">New folder</Btn><Btn variant="primary" icon="upload">Upload</Btn></> : <Badge tone="gray" dot>Read-only</Badge>} />
-      <div className="ch-title" style={{ fontSize:13, fontWeight:600, marginBottom:12, color:"var(--ink-2)" }}>Folders</div>
+      <div className="ch-title" style={{ fontSize: 15, fontWeight:600, marginBottom:12, color:"var(--ink-2)" }}>Folders</div>
       <div className="grid cols-3" style={{ marginBottom:"calc(var(--gap) + 6px)" }}>
         {folders.map(f => (
           <div className="card" key={f.name} style={{ padding:16, display:"flex", alignItems:"center", gap:13, cursor:"pointer" }}>
             <div className="tile-ico" style={{ background:f.color+"1a", color:f.color, width:44, height:44 }}><Icon name="folder" size={22} /></div>
-            <div style={{ flex:1 }}><div style={{ fontWeight:600, fontSize:14 }}>{f.name}</div><div className="muted" style={{ fontSize:12 }}>{f.count} files</div></div>
+            <div style={{ flex:1 }}><div style={{ fontWeight:600, fontSize: 16 }}>{f.name}</div><div className="muted" style={{ fontSize: 14 }}>{f.count} files</div></div>
             <Icon name="chevronRight" size={18} style={{ color:"var(--muted)" }} />
           </div>
         ))}
       </div>
       <Card title="Recent files" flush>
         <table className="table">
-          <thead><tr><th>Name</th><th>Owner</th><th>Modified</th><th>Size</th></tr></thead>
+          <thead><tr><th>Name</th><th>Owner</th><th>Modified</th><th>Size</th><th style={{ textAlign:"right" }}>Actions</th></tr></thead>
           <tbody>
             {D.DOCS.slice(0,6).map(d => {
               const [bg, fg] = D.DOC_COLORS[d.kind] || ["#eef1f4","#475569"];
-              return <tr key={d.id} className="clickable"><td><div style={{ display:"flex", alignItems:"center", gap:11 }}><div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize:9, fontWeight:700, width:30, height:30 }}>{d.kind}</div><span className="t-strong">{d.name}</span></div></td><td>{D.empById[d.owner]?.name.split(" ")[0]}</td><td className="t-mono" style={{ fontSize:12.5 }}>{d.updated}</td><td className="t-mono" style={{ fontSize:12.5 }}>{d.size}</td></tr>;
+              return <tr key={d.id} className="clickable"><td><div style={{ display:"flex", alignItems:"center", gap:11 }}><div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize: 11, fontWeight:700, width:30, height:30 }}>{d.kind}</div><span className="t-strong">{d.name}</span></div></td><td>{D.empById[d.owner]?.name.split(" ")[0]}</td><td className="t-mono" style={{ fontSize: 14.5 }}>{d.updated}</td><td className="t-mono" style={{ fontSize: 14.5 }}>{d.size}</td><td style={{ textAlign:"right" }}><div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}><Btn variant="ghost" sm icon="eye" onClick={(e) => { e.stopPropagation(); handleView(d); }} /><Btn variant="ghost" sm icon="download" onClick={(e) => { e.stopPropagation(); handleDownload(d); }} /></div></td></tr>;
             })}
           </tbody>
         </table>
@@ -308,7 +347,7 @@ export function Announcements() {
       <div className="grid cols-1" style={{ maxWidth:600 }}>
         {D.ANNOUNCE.map(a => (<Card key={a.id} title={<div style={{ display:"flex", alignItems:"center", gap:7 }}>{a.pinned && <Icon name="pin" size={13} style={{ color:"var(--accent)" }} />}{a.title}</div>}
           sub={D.empById[a.author]?.name + " · " + a.time}>
-          <div style={{ fontSize:13, color:"var(--ink-2)", lineHeight:1.6, marginBottom:12 }}>{a.body}</div>
+          <div style={{ fontSize: 15, color:"var(--ink-2)", lineHeight:1.6, marginBottom:12 }}>{a.body}</div>
           <Badge tone="gray" dot>{a.dept}</Badge>
         </Card>))}
       </div>
@@ -327,7 +366,7 @@ export function Clients() {
           <thead><tr><th>Client</th><th>Industry</th><th>Contact</th><th>Projects</th><th>Health</th><th>MRR</th><th>Status</th></tr></thead>
           <tbody>
             {D.CLIENTS.map(c => (<tr key={c.id}>
-              <td><div className="t-strong">{c.name}</div><div className="muted" style={{ fontSize:11.5 }}>{c.id}</div></td>
+              <td><div className="t-strong">{c.name}</div><div className="muted" style={{ fontSize: 13.5 }}>{c.id}</div></td>
               <td>{c.industry}</td>
               <td>{c.contact}</td>
               <td className="mono">{c.projects}</td>
@@ -388,27 +427,48 @@ export function Reports() {
 export function Messages({ currentUser }) {
   const [sel, setSel] = useState(D.THREADS[0].id);
   const [draft, setDraft] = useState("");
+  const [showStickers, setShowStickers] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const fileRef = useRef(null);
+
   const t = D.THREADS.find(x => x.id === sel);
+
+  const handleSend = () => {
+    if (!draft.trim() && attachments.length === 0) return;
+    setDraft("");
+    setAttachments([]);
+    setShowStickers(false);
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
+    }
+  };
+
+  const removeAttachment = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
   return (
-    <div className="page" style={{ paddingBottom:30 }}>
-      <PageHead title="Messages" sub="Direct messages and team chats" />
-      <div className="card" style={{ display:"grid", gridTemplateColumns:"300px 1fr", height:"calc(100vh - 210px)", minHeight:460, overflow:"hidden", padding:0 }}>
+    <div style={{ display: "flex", height: "calc(100vh - 62px)", overflow: "hidden" }}>
+      <div style={{ display:"grid", gridTemplateColumns:"320px 1fr", flex:1, overflow:"hidden", background: "var(--surface)" }}>
         {/* list */}
-        <div style={{ borderRight:"1px solid var(--line)", display:"flex", flexDirection:"column", minHeight:0 }}>
-          <div style={{ padding:12, borderBottom:"1px solid var(--line-2)" }}><Search placeholder="Search messages…" style={{ minWidth:0, width:"100%" }} /></div>
+        <div style={{ borderRight:"1px solid var(--line)", display:"flex", flexDirection:"column", minHeight:0, background: "var(--surface-2)" }}>
+          <div style={{ padding:"16px 14px", borderBottom:"1px solid var(--line-2)", background:"var(--surface)" }}><Search placeholder="Search messages…" style={{ minWidth:0, width:"100%" }} /></div>
           <div style={{ overflowY:"auto", flex:1 }}>
             {D.THREADS.map(th => {
               const e = D.empById[th.id];
               return (
-                <div key={th.id} onClick={() => setSel(th.id)} style={{ display:"flex", gap:11, padding:"12px 14px", cursor:"pointer", borderBottom:"1px solid var(--line-2)", background: sel===th.id ? "var(--accent-soft)" : "transparent" }}>
+                <div key={th.id} onClick={() => setSel(th.id)} style={{ display:"flex", gap:11, padding:"12px 14px", cursor:"pointer", borderBottom:"1px solid var(--line-2)", background: sel===th.id ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "transparent" }}>
                   <div style={{ position:"relative" }}>
                     <Avatar id={th.id} size={40} />
                     {th.online && <span style={{ position:"absolute", bottom:0, right:0, width:11, height:11, borderRadius:99, background:"var(--green)", border:"2px solid var(--surface)" }} />}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}><span style={{ fontSize:13, fontWeight:600 }}>{e?.name}</span><span className="muted" style={{ fontSize:11 }}>{th.time}</span></div>
+                    <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}><span style={{ fontSize: 15, fontWeight:600 }}>{e?.name}</span><span className="muted" style={{ fontSize: 13 }}>{th.time}</span></div>
                     <div style={{ display:"flex", justifyContent:"space-between", gap:8, marginTop:3 }}>
-                      <span className="muted" style={{ fontSize:12, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{th.last}</span>
+                      <span className="muted" style={{ fontSize: 14, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{th.last}</span>
                       {th.unread > 0 && <span className="ni-badge" style={{ background:"var(--accent)" }}>{th.unread}</span>}
                     </div>
                   </div>
@@ -418,30 +478,73 @@ export function Messages({ currentUser }) {
           </div>
         </div>
         {/* thread */}
-        <div style={{ display:"flex", flexDirection:"column", minHeight:0, background:"var(--surface-2)" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:11, padding:"12px 18px", borderBottom:"1px solid var(--line)", background:"var(--surface)" }}>
+        <div style={{ display:"flex", flexDirection:"column", minHeight:0, background:"var(--surface-2) url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode:"overlay", opacity: 0.98 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:11, padding:"12px 18px", borderBottom:"1px solid var(--line)", background:"var(--surface)", zIndex:10 }}>
             <Avatar id={sel} size={34} />
-            <div style={{ flex:1 }}><div style={{ fontSize:13.5, fontWeight:600 }}>{D.empById[sel]?.name}</div><div className="muted" style={{ fontSize:11.5 }}>{t.online ? "Online" : "Offline"} · {D.empById[sel]?.title}</div></div>
-            <Btn variant="ghost" sm icon="phone" /><Btn variant="ghost" sm icon="meetings" />
+            <div style={{ flex:1 }}><div style={{ fontSize: 15.5, fontWeight:600 }}>{D.empById[sel]?.name}</div><div className="muted" style={{ fontSize: 13.5 }}>{t.online ? "Online" : "Offline"}</div></div>
+            <Btn variant="ghost" sm icon="search" /><Btn variant="ghost" sm icon="moreV" />
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"20px 18px", display:"flex", flexDirection:"column", gap:12 }}>
             {t.msgs.map((m, i) => {
               const mine = m[0] === "me";
               return (
-                <div key={i} style={{ display:"flex", gap:9, flexDirection: mine?"row-reverse":"row", alignItems:"flex-end" }}>
-                  <Avatar id={mine ? currentUser.id : m[0]} size={26} />
-                  <div style={{ maxWidth:"68%" }}>
-                    <div style={{ background: mine ? "var(--accent)" : "var(--surface)", color: mine ? "#fff" : "var(--ink)", border: mine?"none":"1px solid var(--line)", padding:"9px 13px", borderRadius:14, borderBottomRightRadius: mine?4:14, borderBottomLeftRadius: mine?14:4, fontSize:13, lineHeight:1.5 }}>{m[1]}</div>
-                    <div className="muted" style={{ fontSize:10.5, marginTop:4, textAlign: mine?"right":"left" }}>{m[2]}</div>
+                <div key={i} style={{ display:"flex", flexDirection: mine?"row-reverse":"row", alignItems:"flex-end" }}>
+                  <div style={{ maxWidth:"70%" }}>
+                    <div style={{ background: mine ? "var(--accent)" : "var(--surface)", color: mine ? "#ffffff" : "var(--ink)", border: mine?"none":"1px solid var(--line)", padding:"8px 12px 10px", borderRadius:12, borderTopRightRadius: mine?0:12, borderTopLeftRadius: mine?12:0, fontSize: 15.5, lineHeight:1.4, boxShadow:"0 1px 2px rgba(0,0,0,0.1)", position:"relative" }}>
+                      {m[1]}
+                      <div className="muted" style={{ fontSize: 12, marginTop:4, textAlign:"right", float:"right", marginLeft:12, paddingTop:6, color: mine ? "rgba(255,255,255,0.7)" : "var(--muted)" }}>
+                        {m[2]} {mine && <Icon name="check" size={13} style={{ color: mine ? "#a5f3fc" : "#53bdeb", marginLeft:2, verticalAlign:"bottom" }} />}
+                      </div>
+                      <div style={{ clear:"both" }} />
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div style={{ padding:14, borderTop:"1px solid var(--line)", background:"var(--surface)", display:"flex", gap:10, alignItems:"center" }}>
-            <Btn variant="ghost" icon="paperclip" />
-            <input className="input" style={{ flex:1, cursor:"text" }} placeholder="Write a message…" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")setDraft("");}} />
-            <Btn variant="primary" icon="arrowRight" onClick={()=>setDraft("")} />
+
+          {/* Attachments Preview */}
+          {attachments.length > 0 && (
+            <div style={{ padding:"12px 18px", background:"var(--surface-2)", borderTop:"1px solid var(--line)", display:"flex", gap:10, overflowX:"auto" }}>
+              {attachments.map((file, i) => (
+                <div key={i} style={{ position:"relative", width:64, height:64, borderRadius:8, background:"var(--surface)", border:"1px solid var(--line)", display:"flex", alignItems:"center", justifyContent:"center", padding:6, textAlign:"center", fontSize: 13 }}>
+                  <div style={{ overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", wordBreak:"break-all" }}>{file.name}</div>
+                  <button onClick={() => removeAttachment(i)} style={{ position:"absolute", top:-6, right:-6, background:"var(--red)", color:"#fff", border:"none", borderRadius:99, width:20, height:20, display:"grid", placeItems:"center", cursor:"pointer", fontSize: 13, boxShadow:"var(--sh-xs)" }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Stickers & GIFs Box */}
+          {showStickers && (
+            <div style={{ height:220, background:"var(--surface)", borderTop:"1px solid var(--line)", display:"flex", flexDirection:"column" }}>
+              <div style={{ display:"flex", gap:16, padding:"10px 18px", borderBottom:"1px solid var(--line-2)", background:"var(--surface-2)" }}>
+                <div style={{ fontSize: 15, fontWeight:600, cursor:"pointer", color:"var(--ink)" }}>Stickers</div>
+                <div style={{ fontSize: 15, fontWeight:600, cursor:"pointer", color:"var(--muted)" }}>GIFs</div>
+              </div>
+              <div style={{ flex:1, padding:18, overflowY:"auto", display:"flex", gap:12, flexWrap:"wrap", alignContent:"flex-start" }}>
+                {["👍","😂","🚀","🎉","❤️","🔥","💯","🙏","👋","👀","🙌","🤔","😎","💡","✨","🎈","🔥","💪"].map((st, i) => (
+                  <div key={i} style={{ fontSize: 34, cursor:"pointer", transition:"transform .1s" }} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"} onClick={() => { setDraft(draft + st); }}>{st}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Chat Input */}
+          <div style={{ padding:"10px 14px", background:"var(--surface-2)", display:"flex", gap:8, alignItems:"flex-end" }}>
+            <div style={{ display:"flex", gap:4, paddingBottom:5 }}>
+              <Btn variant="ghost" sm icon="sparkles" onClick={() => setShowStickers(!showStickers)} style={{ padding:0, width:36, height:36, borderRadius:99, background:"var(--surface)", border:"none" }} title="Stickers" />
+              <Btn variant="ghost" sm icon="plus" onClick={() => fileRef.current?.click()} style={{ padding:0, width:36, height:36, borderRadius:99, background:"var(--surface)", border:"none" }} title="Attach Files" />
+              <input type="file" multiple ref={fileRef} style={{ display:"none" }} onChange={handleFileChange} />
+            </div>
+            <div style={{ flex:1, background:"var(--surface)", borderRadius:20, padding:"8px 16px", minHeight:40, border:"1px solid var(--line)", display:"flex", alignItems:"center" }}>
+              <input className="input" style={{ width:"100%", border:"none", background:"transparent", padding:0, height:24, boxShadow:"none", outline:"none" }} placeholder="Type a message" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")handleSend();}} />
+            </div>
+            {(draft.trim() || attachments.length > 0) ? (
+              <Btn variant="primary" icon="arrowRight" onClick={handleSend} style={{ width:40, height:40, borderRadius:99, padding:0, flexShrink:0, marginBottom:1 }} />
+            ) : (
+              <Btn variant="ghost" icon="play" style={{ width:40, height:40, borderRadius:99, padding:0, flexShrink:0, marginBottom:1, background:"var(--surface)", border:"none", color:"var(--muted)" }} title="Voice Message" />
+            )}
           </div>
         </div>
       </div>
@@ -457,11 +560,11 @@ function MiniCalendar() {
   return (
     <div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, marginBottom:6 }}>
-        {days.map((d,i)=><div key={i} style={{ textAlign:"center", fontSize:11, color:"var(--muted)", fontWeight:600 }}>{d}</div>)}
+        {days.map((d,i)=><div key={i} style={{ textAlign:"center", fontSize: 13, color:"var(--muted)", fontWeight:600 }}>{d}</div>)}
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4 }}>
         {cells.map((c,i)=>(
-          <div key={i} style={{ aspectRatio:"1", display:"grid", placeItems:"center", fontSize:12, borderRadius:8,
+          <div key={i} style={{ aspectRatio:"1", display:"grid", placeItems:"center", fontSize: 14, borderRadius:8,
             background: c===2?"var(--accent)":events.includes(c)?"var(--accent-soft)":"transparent",
             color: c===2?"#fff":events.includes(c)?"var(--accent-ink)":c?"var(--ink-2)":"transparent",
             fontWeight: c===2||events.includes(c)?600:400, cursor:c?"pointer":"default" }}>{c||""}</div>
@@ -483,12 +586,12 @@ export function Meetings({ role }) {
           {list.map((m, i) => (
             <div className="card" key={i} style={{ padding:"var(--pad-card)", display:"flex", gap:16, alignItems:"center" }}>
               <div style={{ textAlign:"center", minWidth:62, padding:"10px 8px", background:"var(--accent-soft)", borderRadius:10 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:"var(--accent-ink)", textTransform:"uppercase" }}>{m.time.split(" · ")[0]}</div>
-                <div className="mono" style={{ fontSize:17, fontWeight:700, color:"var(--accent-ink)", marginTop:2 }}>{m.time.split(" · ")[1]}</div>
+                <div style={{ fontSize: 13, fontWeight:600, color:"var(--accent-ink)", textTransform:"uppercase" }}>{m.time.split(" · ")[0]}</div>
+                <div className="mono" style={{ fontSize: 19, fontWeight:700, color:"var(--accent-ink)", marginTop:2 }}>{m.time.split(" · ")[1]}</div>
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:14.5, fontWeight:600 }}>{m.title}</div>
-                <div className="muted" style={{ fontSize:12.5, marginTop:3, display:"flex", alignItems:"center", gap:6 }}><Icon name="meetings" size={14} /> {m.room} · {m.who.length} attendees</div>
+                <div style={{ fontSize: 16.5, fontWeight:600 }}>{m.title}</div>
+                <div className="muted" style={{ fontSize: 14.5, marginTop:3, display:"flex", alignItems:"center", gap:6 }}><Icon name="meetings" size={14} /> {m.room} · {m.who.length} attendees</div>
               </div>
               <AvatarStack ids={m.who} size={30} max={4} />
               <Btn variant="soft" sm icon="play">Join</Btn>
@@ -516,7 +619,7 @@ export function Notifications() {
           <div className="lr-main">
             <div className="lr-title">{D.empById[n.who]?.name}</div>
             <div className="lr-sub">{n.text}</div>
-            <div className="lr-sub" style={{ marginTop:6, fontSize:11 }}>{n.time}</div>
+            <div className="lr-sub" style={{ marginTop:6, fontSize: 13 }}>{n.time}</div>
           </div>
           {n.unread && <div style={{ width:8, height:8, borderRadius:"50%", background:"var(--accent)" }} />}
         </div>))}
@@ -557,8 +660,8 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
           <div style={{ display:"flex", alignItems:"center", gap:16, paddingBottom:20, borderBottom:"1px solid var(--line-2)", marginBottom:6 }}>
             <Avatar id={currentUser.id} size={64} />
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:18, fontWeight:600 }}>{currentUser.name}</div>
-              <div className="muted" style={{ fontSize:13 }}>{currentUser.title} · {currentUser.email || "guest@external.com"}</div>
+              <div style={{ fontSize: 20, fontWeight:600 }}>{currentUser.name}</div>
+              <div className="muted" style={{ fontSize: 15 }}>{currentUser.title} · {currentUser.email || "guest@external.com"}</div>
               <div style={{ marginTop:8 }}><Badge tone="teal" dot>{roleObj.name}</Badge></div>
             </div>
             <Btn variant="ghost" icon="upload">Change photo</Btn>
@@ -658,7 +761,7 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <div style={{ padding:12, background:'var(--accent-soft)', borderRadius:'var(--r-md)', fontSize:12.5, color:'var(--accent-ink)', marginBottom:14 }}>
+                <div style={{ padding:12, background:'var(--accent-soft)', borderRadius:'var(--r-md)', fontSize: 14.5, color:'var(--accent-ink)', marginBottom:14 }}>
                   <Icon name="info" size={14} style={{ marginRight:6, verticalAlign:'middle' }} />
                   A temporary password will be sent to {newMember.email || "the user's email"}
                 </div>
@@ -691,7 +794,7 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
                   {teamMembers.map(member => (
                     <tr key={member.id}>
                       <td><Person id={member.id} /></td>
-                      <td className="t-mono" style={{ fontSize:12.5 }}>{member.email}</td>
+                      <td className="t-mono" style={{ fontSize: 14.5 }}>{member.email}</td>
                       <td><Badge tone="blue">{D.ROLES.find(r => r.key === member.role)?.name}</Badge></td>
                       <td><StatusBadge value={member.status} /></td>
                       <td style={{ textAlign:"right" }}><Btn variant="ghost" sm icon="trash" /></td>
@@ -728,7 +831,7 @@ export function Schedule({ role, currentUser }) {
       <PageHead title="Schedule" sub={personal ? "Your week at a glance" : "Team schedule and meetings"}
         actions={<>
           <Btn variant="ghost" icon="chevronLeft" />
-          <span style={{ fontSize:13, fontWeight:600, minWidth:150, textAlign:"center" }}>Jun 2 – 6, 2026</span>
+          <span style={{ fontSize: 15, fontWeight:600, minWidth:150, textAlign:"center" }}>Jun 2 – 6, 2026</span>
           <Btn variant="ghost" icon="chevronRight" />
           <Btn variant="primary" icon="plus">Event</Btn>
         </>} />
@@ -740,8 +843,8 @@ export function Schedule({ role, currentUser }) {
               <div />
               {DAYS.map((d, i) => (
                 <div key={d} style={{ padding:"12px 10px", textAlign:"center", borderLeft:"1px solid var(--line-2)" }}>
-                  <div style={{ fontSize:11.5, color:"var(--muted)", fontWeight:600, letterSpacing:".04em" }}>{d.toUpperCase()}</div>
-                  <div style={{ fontSize:18, fontWeight:600, marginTop:2, color: i===1?"var(--accent)":"var(--ink)" }}>{DATES[i]}</div>
+                  <div style={{ fontSize: 13.5, color:"var(--muted)", fontWeight:600, letterSpacing:".04em" }}>{d.toUpperCase()}</div>
+                  <div style={{ fontSize: 20, fontWeight:600, marginTop:2, color: i===1?"var(--accent)":"var(--ink)" }}>{DATES[i]}</div>
                 </div>
               ))}
             </div>
@@ -750,7 +853,7 @@ export function Schedule({ role, currentUser }) {
               {/* hours col */}
               <div>
                 {Array.from({ length: endH - startH }).map((_, i) => (
-                  <div key={i} style={{ height:hourH, fontSize:11, color:"var(--muted)", textAlign:"right", paddingRight:9, transform:"translateY(-6px)", fontFamily:"var(--mono)" }}>{startH + i}:00</div>
+                  <div key={i} style={{ height:hourH, fontSize: 13, color:"var(--muted)", textAlign:"right", paddingRight:9, transform:"translateY(-6px)", fontFamily:"var(--mono)" }}>{startH + i}:00</div>
                 ))}
               </div>
               {DAYS.map((d, di) => (
@@ -761,8 +864,8 @@ export function Schedule({ role, currentUser }) {
                     return (
                       <div key={ei} style={{ position:"absolute", left:5, right:5, top:(e.start - startH) * hourH + 2, height:e.len * hourH - 5,
                         background:bg, borderLeft:`3px solid ${bar}`, borderRadius:7, padding:"6px 8px", overflow:"hidden", cursor:"pointer" }}>
-                        <div style={{ fontSize:11.5, fontWeight:600, color:fg, lineHeight:1.25 }}>{e.title}</div>
-                        <div style={{ fontSize:10.5, color:fg, opacity:.8, marginTop:2 }}>{Math.floor(e.start)}:{(e.start%1?"30":"00")} · {D.empById[e.who]?.name.split(" ")[0]}</div>
+                        <div style={{ fontSize: 13.5, fontWeight:600, color:fg, lineHeight:1.25 }}>{e.title}</div>
+                        <div style={{ fontSize: 12.5, color:fg, opacity:.8, marginTop:2 }}>{Math.floor(e.start)}:{(e.start%1?"30":"00")} · {D.empById[e.who]?.name.split(" ")[0]}</div>
                       </div>
                     );
                   })}
@@ -818,8 +921,8 @@ export function Dienstplan({ onNavigate }) {
       <PageHead title="Dienstplan" sub="Work schedule and shift planning" />
       <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
         <Icon name="schedule" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
-        <div style={{ fontSize:20, fontWeight:600, marginBottom:12 }}>Dienstplan</div>
-        <div style={{ fontSize:14, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
+        <div style={{ fontSize: 22, fontWeight:600, marginBottom:12 }}>Dienstplan</div>
+        <div style={{ fontSize: 16, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
           Manage team work schedules, shifts, and planning. Coming soon.
         </div>
         <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
@@ -830,16 +933,60 @@ export function Dienstplan({ onNavigate }) {
 
 // ========== PERSONALREGLEMENT ==========
 export function Personalreglement({ onNavigate }) {
+  const handleDownloadReglamento = () => {
+    const content = "Reglamento de Prueba - WorkCentral\n\n" +
+                    "1. Horario de Trabajo:\nEl horario regular es de 9:00 AM a 6:00 PM, de lunes a viernes.\n\n" +
+                    "2. Trabajo Remoto:\nSe permite el trabajo remoto hasta 3 días a la semana.\n\n" +
+                    "3. Vacaciones y Permisos:\nTodo empleado tiene derecho a 20 días hábiles de vacaciones al año.\n\n" +
+                    "4. Código de Conducta:\nFomentamos un ambiente de respeto, inclusión y profesionalismo.\n\n" +
+                    "5. Uso de Equipos:\nLos equipos proporcionados son estrictamente para uso laboral.";
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Reglamento_Personal_Prueba.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Personalreglement" sub="Employee handbook and regulations" />
-      <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
-        <Icon name="book" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
-        <div style={{ fontSize:20, fontWeight:600, marginBottom:12 }}>Personalreglement</div>
-        <div style={{ fontSize:14, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
-          Access company personnel regulations and employee handbook. Coming soon.
+      <PageHead title="Personalreglement" sub="Reglamento del Personal" />
+      <Card style={{ maxWidth: 700, margin: "20px auto", padding: "40px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, borderBottom: "1px solid var(--line-2)", paddingBottom: 20 }}>
+          <Icon name="book" size={36} style={{ color: "var(--accent)" }} />
+          <div style={{ fontSize: 24, fontWeight: 600 }}>Reglamento de Prueba</div>
         </div>
-        <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
+        
+        <div style={{ fontSize: 16, color: "var(--ink-2)", lineHeight: 1.8, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <strong style={{ color: "var(--ink)", fontSize: 17 }}>1. Horario de Trabajo</strong>
+            <p style={{ margin: "6px 0 0 0" }}>El horario regular es de 9:00 AM a 6:00 PM, de lunes a viernes. Se permite flexibilidad de ±1 hora previa coordinación con el líder del equipo.</p>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink)", fontSize: 17 }}>2. Trabajo Remoto</strong>
+            <p style={{ margin: "6px 0 0 0" }}>Se permite el trabajo remoto hasta 3 días a la semana para roles elegibles. Los empleados deben asegurar una conexión estable a internet durante sus horas laborables.</p>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink)", fontSize: 17 }}>3. Vacaciones y Permisos</strong>
+            <p style={{ margin: "6px 0 0 0" }}>Todo empleado tiene derecho a 20 días hábiles de vacaciones al año. Las solicitudes deben hacerse con al menos 2 semanas de anticipación a través del sistema.</p>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink)", fontSize: 17 }}>4. Código de Conducta</strong>
+            <p style={{ margin: "6px 0 0 0" }}>Fomentamos un ambiente de respeto, inclusión y profesionalismo. No se tolerará ningún tipo de discriminación, acoso o comportamiento inapropiado.</p>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink)", fontSize: 17 }}>5. Uso de Equipos</strong>
+            <p style={{ margin: "6px 0 0 0" }}>Los equipos proporcionados por la empresa (laptops, monitores, periféricos) son estrictamente para uso laboral y deben devolverse en buen estado al término del contrato.</p>
+          </div>
+        </div>
+        
+        <div style={{ marginTop: 35, display: "flex", gap: 12, borderTop: "1px solid var(--line-2)", paddingTop: 20 }}>
+          <Btn variant="primary" icon="download" onClick={handleDownloadReglamento}>Descargar Reglamento</Btn>
+          <Btn variant="ghost" onClick={() => onNavigate("dashboard")}>Volver al Dashboard</Btn>
+        </div>
       </Card>
     </div>
   );
@@ -852,8 +999,8 @@ export function Vademecum({ onNavigate }) {
       <PageHead title="Vademecum" sub="Quick reference guide and procedures" />
       <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
         <Icon name="alphabetical" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
-        <div style={{ fontSize:20, fontWeight:600, marginBottom:12 }}>Vademecum</div>
-        <div style={{ fontSize:14, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
+        <div style={{ fontSize: 22, fontWeight:600, marginBottom:12 }}>Vademecum</div>
+        <div style={{ fontSize: 16, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
           Quick reference guide with procedures and important information. Coming soon.
         </div>
         <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>

@@ -29,9 +29,9 @@ export function Sidebar({ active, onNavigate, collapsed, role, currentUser, comp
       </div>
 
       {company && (
-        <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--line)", fontSize:11.5, color:"var(--muted)" }}>
+        <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--line)", fontSize: 13.5, color:"var(--muted)" }}>
           <div style={{ fontWeight:600, color:"var(--ink-2)", marginBottom:3 }}>{company.name}</div>
-          <div style={{ fontSize:10 }}>{company.companyId}</div>
+          <div style={{ fontSize: 12 }}>{company.companyId}</div>
         </div>
       )}
 
@@ -83,11 +83,11 @@ export function Sidebar({ active, onNavigate, collapsed, role, currentUser, comp
               zIndex:100,
               overflow:"hidden"
             }}>
-              <div onClick={() => { onNavigate("settings"); setShowMenu(false); }} style={{ padding:"10px 14px", cursor:"pointer", fontSize:13, borderBottom:"1px solid var(--line-2)", display:"flex", alignItems:"center", gap:8, color:"var(--ink)" }}>
+              <div onClick={() => { onNavigate("settings"); setShowMenu(false); }} style={{ padding:"10px 14px", cursor:"pointer", fontSize: 15, borderBottom:"1px solid var(--line-2)", display:"flex", alignItems:"center", gap:8, color:"var(--ink)" }}>
                 <Icon name="settings" size={16} />
                 Settings
               </div>
-              <div onClick={() => { onLogout(); setShowMenu(false); }} style={{ padding:"10px 14px", cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", gap:8, color:"var(--ink)" }}>
+              <div onClick={() => { onLogout(); setShowMenu(false); }} style={{ padding:"10px 14px", cursor:"pointer", fontSize: 15, display:"flex", alignItems:"center", gap:8, color:"var(--ink)" }}>
                 <Icon name="logout" size={16} />
                 Sign out
               </div>
@@ -122,7 +122,7 @@ function RoleSwitcher({ role, onChange }) {
       </div>
       {open && (
         <div style={menuStyle}>
-          <div style={{ padding:"10px 12px 8px", fontSize:11, fontWeight:600, letterSpacing:".05em", textTransform:"uppercase", color:"var(--muted)" }}>Switch role</div>
+          <div style={{ padding:"10px 12px 8px", fontSize: 13, fontWeight:600, letterSpacing:".05em", textTransform:"uppercase", color:"var(--muted)" }}>Switch role</div>
           {ROLES.map(r => (
             <div key={r.key} onClick={() => { onChange(r.key); setOpen(false); }}
               style={{ display:"flex", gap:11, padding:"9px 12px", cursor:"pointer", alignItems:"flex-start",
@@ -131,11 +131,11 @@ function RoleSwitcher({ role, onChange }) {
               onMouseLeave={e => { if (r.key !== role) e.currentTarget.style.background = "transparent"; }}>
               <span style={{ width:9, height:9, borderRadius:99, background:r.color, marginTop:4, flexShrink:0 }} />
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)", display:"flex", alignItems:"center", gap:6 }}>
+                <div style={{ fontSize: 15, fontWeight:600, color:"var(--ink)", display:"flex", alignItems:"center", gap:6 }}>
                   {r.name}
                   {r.key === role && <Icon name="check" size={14} style={{ color:"var(--accent-ink)" }} />}
                 </div>
-                <div style={{ fontSize:11.5, color:"var(--ink-3)", marginTop:2, lineHeight:1.4 }}>{r.desc}</div>
+                <div style={{ fontSize: 13.5, color:"var(--ink-3)", marginTop:2, lineHeight:1.4 }}>{r.desc}</div>
               </div>
             </div>
           ))}
@@ -145,7 +145,7 @@ function RoleSwitcher({ role, onChange }) {
   );
 }
 
-export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigate, company, onLogout }) {
+export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigate, company, onLogout, theme, onToggleTheme }) {
   return (
     <header className="topbar">
       <button className="tb-collapse" onClick={onToggleCollapse} title="Toggle sidebar"><Icon name="panelLeft" size={18} /></button>
@@ -160,6 +160,9 @@ export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigat
         <span className="kbd-row"><kbd>⌘</kbd><kbd>K</kbd></span>
       </div>
       <RoleSwitcher role={role} onChange={onRole} />
+      <button className="tb-icon-btn" title="Toggle theme" onClick={onToggleTheme}>
+        <Icon name={theme === "dark" ? "sun" : "moon"} size={18} />
+      </button>
       <button className="tb-icon-btn" title="Messages" onClick={() => onNavigate("messages")}><Icon name="messages" size={18} /></button>
       <button className="tb-icon-btn" title="Notifications" onClick={() => onNavigate("notifications")}>
         <Icon name="bell" size={18} /><span className="tb-dot" />
