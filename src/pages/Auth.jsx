@@ -85,14 +85,14 @@ export function Login({ onLogin }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
-                fontSize: '24px',
+                fontSize: "28px",
                 color: 'var(--surface)',
                 letterSpacing: '-2px'
               }}>
                 W
               </div>
               <h1 style={{
-                fontSize: '26px',
+                fontSize: "30px",
                 fontWeight: '700',
                 color: 'var(--ink)',
                 margin: '0',
@@ -104,7 +104,7 @@ export function Login({ onLogin }) {
 
             {/* Heading */}
             <h2 style={{
-              fontSize: '32px',
+              fontSize: "36px",
               fontWeight: '700',
               color: 'var(--ink)',
               margin: '0 0 12px 0',
@@ -115,7 +115,7 @@ export function Login({ onLogin }) {
 
             {/* Subheading */}
             <p style={{
-              fontSize: '15px',
+              fontSize: "19px",
               color: 'var(--ink-3)',
               margin: '0',
               lineHeight: '1.6',
@@ -133,7 +133,7 @@ export function Login({ onLogin }) {
               background: 'var(--red-soft)',
               border: '1px solid #fecaca',
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: "17px",
               color: 'var(--red)'
             }}>
               {error}
@@ -146,7 +146,7 @@ export function Login({ onLogin }) {
             <div>
               <label style={{
                 display: 'block',
-                fontSize: '13px',
+                fontSize: "17px",
                 fontWeight: '600',
                 color: 'var(--ink)',
                 marginBottom: '8px'
@@ -164,7 +164,7 @@ export function Login({ onLogin }) {
                   padding: '11px 13px',
                   border: '1px solid #cbd5e0',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: "18px",
                   fontFamily: 'inherit',
                   background: 'var(--surface)',
                   outline: 'none',
@@ -178,7 +178,7 @@ export function Login({ onLogin }) {
             <div>
               <label style={{
                 display: 'block',
-                fontSize: '13px',
+                fontSize: "17px",
                 fontWeight: '600',
                 color: 'var(--ink)',
                 marginBottom: '8px'
@@ -196,7 +196,7 @@ export function Login({ onLogin }) {
                   padding: '11px 13px',
                   border: '1px solid #cbd5e0',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: "18px",
                   fontFamily: 'inherit',
                   background: 'var(--surface)',
                   outline: 'none',
@@ -218,7 +218,7 @@ export function Login({ onLogin }) {
                 color: 'var(--surface)',
                 border: 'none',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: "18px",
                 fontWeight: '600',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.8 : 1,
@@ -248,7 +248,7 @@ export function Login({ onLogin }) {
                 color: 'var(--surface)',
                 border: 'none',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: "18px",
                 fontWeight: '600',
                 cursor: 'pointer',
                 transition: 'none'
@@ -267,7 +267,7 @@ export function Login({ onLogin }) {
           }}>
             <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
             <span style={{
-              fontSize: '13px',
+              fontSize: "17px",
               color: 'var(--muted)',
               fontWeight: '500',
               whiteSpace: 'nowrap'
@@ -287,7 +287,7 @@ export function Login({ onLogin }) {
               color: 'var(--ink)',
               border: '1px solid #cbd5e0',
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: "18px",
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'none'
@@ -298,7 +298,7 @@ export function Login({ onLogin }) {
 
           {/* Footer */}
           <p style={{
-            fontSize: '11px',
+            fontSize: "15px",
             color: 'var(--muted)',
             textAlign: 'center',
             margin: '32px 0 0 0',
@@ -429,14 +429,14 @@ export function Register({ onRegister }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
-                fontSize: '24px',
+                fontSize: "28px",
                 color: 'var(--surface)',
                 letterSpacing: '-2px'
               }}>
                 W
               </div>
               <h1 style={{
-                fontSize: '26px',
+                fontSize: "30px",
                 fontWeight: '700',
                 color: 'var(--ink)',
                 margin: '0',
@@ -465,7 +465,7 @@ export function Register({ onRegister }) {
                 }} />
               </div>
               <p style={{
-                fontSize: '12px',
+                fontSize: "16px",
                 color: 'var(--ink-3)',
                 margin: '0',
                 fontWeight: '500'
@@ -475,7 +475,7 @@ export function Register({ onRegister }) {
             </div>
 
             <h2 style={{
-              fontSize: '28px',
+              fontSize: "32px",
               fontWeight: '700',
               color: 'var(--ink)',
               margin: '0 0 8px 0',
@@ -484,7 +484,7 @@ export function Register({ onRegister }) {
               {step === 1 ? 'Create your workspace' : 'Set up admin account'}
             </h2>
             <p style={{
-              fontSize: '14px',
+              fontSize: "18px",
               color: 'var(--ink-3)',
               margin: '0',
               lineHeight: '1.5',
@@ -502,7 +502,7 @@ export function Register({ onRegister }) {
               background: 'var(--red-soft)',
               border: '1px solid #fecaca',
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: "17px",
               color: 'var(--red)'
             }}>
               {error}
@@ -517,7 +517,7 @@ export function Register({ onRegister }) {
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '13px',
+                    fontSize: "17px",
                     fontWeight: '600',
                     color: 'var(--ink)',
                     marginBottom: '8px'
@@ -535,7 +535,7 @@ export function Register({ onRegister }) {
                       padding: '11px 13px',
                       border: '1px solid #cbd5e0',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: "18px",
                       fontFamily: 'inherit',
                       background: 'var(--surface)',
                       outline: 'none',
@@ -549,7 +549,7 @@ export function Register({ onRegister }) {
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '13px',
+                    fontSize: "17px",
                     fontWeight: '600',
                     color: 'var(--ink)',
                     marginBottom: '8px'
@@ -565,7 +565,7 @@ export function Register({ onRegister }) {
                       padding: '11px 13px',
                       border: '1px solid #cbd5e0',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: "18px",
                       fontFamily: 'inherit',
                       background: 'var(--surface)',
                       outline: 'none',
@@ -586,7 +586,7 @@ export function Register({ onRegister }) {
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '13px',
+                    fontSize: "17px",
                     fontWeight: '600',
                     color: 'var(--ink)',
                     marginBottom: '8px'
@@ -604,7 +604,7 @@ export function Register({ onRegister }) {
                       padding: '11px 13px',
                       border: '1px solid #cbd5e0',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: "18px",
                       fontFamily: 'inherit',
                       background: 'var(--surface)',
                       outline: 'none',
@@ -618,7 +618,7 @@ export function Register({ onRegister }) {
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '13px',
+                    fontSize: "17px",
                     fontWeight: '600',
                     color: 'var(--ink)',
                     marginBottom: '8px'
@@ -636,7 +636,7 @@ export function Register({ onRegister }) {
                       padding: '11px 13px',
                       border: '1px solid #cbd5e0',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: "18px",
                       fontFamily: 'inherit',
                       background: 'var(--surface)',
                       outline: 'none',
@@ -650,7 +650,7 @@ export function Register({ onRegister }) {
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '13px',
+                    fontSize: "17px",
                     fontWeight: '600',
                     color: 'var(--ink)',
                     marginBottom: '8px'
@@ -668,7 +668,7 @@ export function Register({ onRegister }) {
                       padding: '11px 13px',
                       border: '1px solid #cbd5e0',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: "18px",
                       fontFamily: 'inherit',
                       background: 'var(--surface)',
                       outline: 'none',
@@ -682,7 +682,7 @@ export function Register({ onRegister }) {
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '13px',
+                    fontSize: "17px",
                     fontWeight: '600',
                     color: 'var(--ink)',
                     marginBottom: '8px'
@@ -700,7 +700,7 @@ export function Register({ onRegister }) {
                       padding: '11px 13px',
                       border: '1px solid #cbd5e0',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: "18px",
                       fontFamily: 'inherit',
                       background: 'var(--surface)',
                       outline: 'none',
@@ -729,7 +729,7 @@ export function Register({ onRegister }) {
                     color: 'var(--ink)',
                     border: '1px solid #cbd5e0',
                     borderRadius: '6px',
-                    fontSize: '14px',
+                    fontSize: "18px",
                     fontWeight: '600',
                     cursor: 'pointer',
                     transition: 'none'
@@ -748,7 +748,7 @@ export function Register({ onRegister }) {
                   color: 'var(--surface)',
                   border: 'none',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: "18px",
                   fontWeight: '600',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   opacity: loading ? 0.8 : 1,
@@ -762,7 +762,7 @@ export function Register({ onRegister }) {
 
           {/* Sign In Link */}
           <p style={{
-            fontSize: '13px',
+            fontSize: "17px",
             color: 'var(--ink-3)',
             textAlign: 'center',
             margin: '24px 0 0 0'

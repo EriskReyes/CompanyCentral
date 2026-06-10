@@ -196,8 +196,8 @@ export function Donut({ data, size = 150, thickness = 22, center }) {
             return el;
           })}
         </g>
-        {center && <text x="50%" y="48%" textAnchor="middle" fontSize="26" fontWeight="600" fontFamily="var(--mono)" fill="var(--ink)">{center}</text>}
-        {center && <text x="50%" y="62%" textAnchor="middle" fontSize="11" fill="var(--muted)" fontFamily="var(--font)">total</text>}
+        {center && <text x="50%" y="48%" textAnchor="middle" fontSize="28" fontWeight="600" fontFamily="var(--mono)" fill="var(--ink)">{center}</text>}
+        {center && <text x="50%" y="62%" textAnchor="middle" fontSize="13" fill="var(--muted)" fontFamily="var(--font)">total</text>}
       </svg>
       <div className="legend">
         {data.map((d, i) => (

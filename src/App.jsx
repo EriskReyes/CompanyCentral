@@ -167,6 +167,8 @@ export default function App() {
           onNavigate={navigate}
           company={companyData}
           onLogout={handleLogout}
+          theme={t.theme}
+          onToggleTheme={() => setTweak("theme", t.theme === "dark" ? "light" : "dark")}
         />
         <div className="content">
           {access === "none"
@@ -182,7 +184,7 @@ export default function App() {
           {permissionRequest && (
             <div className="permission-toast">
               <div style={{ fontWeight: 600, marginBottom: 4 }}>Access Request Sent</div>
-              <div style={{ opacity: 0.9, fontSize: 12 }}>Admin will review your request for {permissionRequest.pageLabel}</div>
+              <div style={{ opacity: 0.9, fontSize: 14 }}>Admin will review your request for {permissionRequest.pageLabel}</div>
             </div>
           )}
         </div>
