@@ -21,6 +21,7 @@ const USER_BY_ROLE = {
 
 const TWEAK_DEFAULTS = {
   "accent": "#0d7d7d",
+  "theme": "dark",
   "sidebar": "dark",
   "density": "regular"
 };
@@ -85,6 +86,7 @@ export default function App() {
 
   useEffect(() => { document.body.setAttribute("data-sidebar", t.sidebar); }, [t.sidebar]);
   useEffect(() => { document.body.setAttribute("data-density", t.density); }, [t.density]);
+  useEffect(() => { document.documentElement.setAttribute("data-theme", t.theme); }, [t.theme]);
 
   const [permissionRequest, setPermissionRequest] = useState(null);
 
@@ -187,6 +189,13 @@ export default function App() {
       </div>
 
       <TweaksPanel>
+        <TweakSection label="Theme" />
+        <TweakRadio
+          label="Color Mode"
+          value={t.theme}
+          options={["dark","light"]}
+          onChange={v => setTweak("theme", v)}
+        />
         <TweakSection label="Brand color" />
         <TweakColor
           label="Accent"

@@ -68,6 +68,32 @@
 
   --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --topbar-bg: rgba(255,255,255,.86);
+}
+
+/* dark theme */
+[data-theme="dark"] {
+  --bg: #0b111a;
+  --surface: #131d2a;
+  --surface-2: #1a2534;
+  --line: #2a3848;
+  --line-2: #1f2c3b;
+  --ink: #e2e8f0;
+  --ink-2: #94a3b8;
+  --ink-3: #64748b;
+  --muted: #475569;
+  --topbar-bg: rgba(19,29,42,.86);
+
+  --sh-xs: 0 1px 2px rgba(0,0,0,0.3);
+  --sh-sm: 0 1px 2px rgba(0,0,0,0.25), 0 2px 5px rgba(0,0,0,0.3);
+  --sh-md: 0 2px 4px rgba(0,0,0,0.25), 0 6px 16px rgba(0,0,0,0.4);
+  --sh-lg: 0 8px 30px rgba(0,0,0,0.5);
+  
+  --green-soft: rgba(21, 147, 95, 0.15);
+  --amber-soft: rgba(194, 121, 10, 0.15);
+  --red-soft: rgba(212, 69, 62, 0.15);
+  --blue-soft: rgba(47, 111, 219, 0.15);
+  --violet-soft: rgba(109, 84, 214, 0.15);
 }
 
 /* density variants */
@@ -220,7 +246,7 @@ body {
 .main { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .topbar {
   height: var(--topbar-h); flex-shrink: 0;
-  background: rgba(255,255,255,.86); backdrop-filter: blur(10px);
+  background: var(--topbar-bg); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
   display: flex; align-items: center; gap: 14px;
   padding: 0 22px; z-index: 20;
