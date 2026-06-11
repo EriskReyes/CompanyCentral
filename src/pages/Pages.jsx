@@ -1,23 +1,85 @@
 import React, { useState, useRef } from 'react';
 import { Icon } from '../icons';
-import { Card, Btn, Badge, StatusBadge, Priority, Progress, Avatar, AvatarStack, Person, Search, Select, Seg, Tabs, PageHead, EmptyState, BarChart, Donut } from '../ui';
+import { Card, Btn, Badge, StatusBadge, Priority, Progress, Avatar, AvatarStack, Person, Search, Select, Seg, Tabs, PageHead, EmptyState, BarChart, Donut, showToast } from '../ui';
 import * as D from '../data';
 
 // ========== PROJECTS ==========
 export function Projects({ access }) {
+  const [projects, setProjects] = useState(D.PROJ);
   const [view, setView] = useState("List");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("All");
+  const [showAdd, setShowAdd] = useState(false);
+  const [newProject, setNewProject] = useState({ name: "", code: "", priority: "Medium", due: "" });
+  
   const canManage = access === "full";
-  const list = D.PROJ.filter(p => (status === "All" || p.status === status) && (q === "" || p.name.toLowerCase().includes(q.toLowerCase())));
+  const list = projects.filter(p => (status === "All" || p.status === status) && (q === "" || p.name.toLowerCase().includes(q.toLowerCase())));
   const cols = ["Planning","On track","At risk","Delayed","Completed"];
+
+  const handleAddProject = () => {
+    if (!newProject.name || !newProject.code) return;
+    const proj = {
+      id: "PRJ-" + (10 + projects.length),
+      name: newProject.name,
+      code: newProject.code.toUpperCase(),
+      status: "Planning",
+      progress: 0,
+      lead: "E-101",
+      team: "Platform",
+      members: ["E-101"],
+      due: newProject.due || "TBD",
+      priority: newProject.priority,
+      done: 0,
+      total: 0,
+      client: null
+    };
+    setProjects([proj, ...projects]);
+    setNewProject({ name: "", code: "", priority: "Medium", due: "" });
+    setShowAdd(false);
+    showToast(`Project "${proj.name}" created successfully`);
+  };
 
   return (
     <div className="page">
-      <PageHead title="Projects" sub={`${D.PROJ.filter(p=>p.status!=="Completed").length} active · ${D.PROJ.length} total`}
+      <PageHead title="Projects" sub={`${projects.filter(p=>p.status!=="Completed").length} active · ${projects.length} total`}
         actions={<><Seg options={["List","Board"]} value={view} onChange={setView} />
-          {canManage ? <Btn variant="primary" icon="plus">New project</Btn> : <Badge tone="gray" dot>Read-only</Badge>}
+          {canManage ? <Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New project"}</Btn> : <Badge tone="gray" dot>Read-only</Badge>}
         </>} />
+
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Project Name</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Website Redesign" value={newProject.name} onChange={e => setNewProject({...newProject, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Project Code</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. WEB2" value={newProject.code} onChange={e => setNewProject({...newProject, code: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Priority</label>
+              <select className="input" style={{ width: "100%" }} value={newProject.priority} onChange={e => setNewProject({...newProject, priority: e.target.value})}>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Due Date</label>
+              <input type="date" className="input" style={{ width: "100%" }} value={newProject.due} onChange={e => setNewProject({...newProject, due: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddProject}>Create Project</Btn>
+          </div>
+        </Card>
+      )}
+
       <div className="filterbar" style={{ marginBottom:"var(--gap)" }}>
         <Search placeholder="Search projects…" value={q} onChange={setQ} />
         <Select value={status} options={["All","Planning","On track","At risk","Delayed","Completed"]} onChange={setStatus} />
@@ -82,21 +144,86 @@ export function Projects({ access }) {
 
 // ========== TASKS ==========
 export function Tasks({ access, role, currentUser }) {
+  const [tasks, setTasks] = useState(D.TASKS);
   const [view, setView] = useState("Board");
   const [proj, setProj] = useState("All projects");
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTask, setNewTask] = useState({ title: "", proj: "PRJ-01", assignee: currentUser.id, priority: "Medium", due: "" });
+
   const personal = access !== "full" || role === "employee";
   const projOpts = ["All projects", ...D.PROJ.map(p => p.name)];
-  let base = D.TASKS;
+  let base = tasks;
   if (personal) base = base.filter(t => t.assignee === currentUser.id);
   const list = base.filter(t => proj === "All projects" || D.projById[t.proj]?.name === proj);
   const cols = ["Todo","In progress","In review","Blocked","Done"];
 
+  const handleAddTask = () => {
+    if (!newTask.title) return;
+    const task = {
+      id: "T-" + (2400 + tasks.length + 1),
+      title: newTask.title,
+      proj: newTask.proj,
+      assignee: newTask.assignee,
+      status: "Todo",
+      priority: newTask.priority,
+      due: newTask.due || "TBD",
+      tags: []
+    };
+    setTasks([task, ...tasks]);
+    setNewTask({ title: "", proj: "PRJ-01", assignee: currentUser.id, priority: "Medium", due: "" });
+    setShowAdd(false);
+    showToast(`Task "${task.title}" created successfully`);
+  };
+
   return (
     <div className="page">
-      <PageHead title={personal ? "My Tasks" : "Tasks"} sub={personal ? "Tasks assigned to you" : `${D.TASKS.length} tasks across all projects`}
+      <PageHead title={personal ? "My Tasks" : "Tasks"} sub={personal ? "Tasks assigned to you" : `${tasks.length} tasks across all projects`}
         actions={<><Seg options={["Board","List"]} value={view} onChange={setView} />
-          <Btn variant="primary" icon="plus">New task</Btn>
+          <Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New task"}</Btn>
         </>} />
+
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Task Title</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Update user profile design" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Project</label>
+              <select className="input" style={{ width: "100%" }} value={newTask.proj} onChange={e => setNewTask({...newTask, proj: e.target.value})}>
+                {D.PROJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Assignee</label>
+              <select className="input" style={{ width: "100%" }} value={newTask.assignee} onChange={e => setNewTask({...newTask, assignee: e.target.value})}>
+                {D.EMP.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Priority</label>
+              <select className="input" style={{ width: "100%" }} value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value})}>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Due Date</label>
+              <input type="text" className="input" style={{ width: "100%" }} placeholder="e.g. Jun 15" value={newTask.due} onChange={e => setNewTask({...newTask, due: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddTask}>Create Task</Btn>
+          </div>
+        </Card>
+      )}
+
       <div className="filterbar" style={{ marginBottom:"var(--gap)" }}>
         <Select value={proj} options={projOpts} onChange={setProj} />
         {personal && <Badge tone="teal" dot>Showing your tasks</Badge>}
@@ -158,15 +285,78 @@ export function Tasks({ access, role, currentUser }) {
 
 // ========== EMPLOYEES ==========
 export function Employees() {
+  const [employees, setEmployees] = useState(D.EMP);
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("All");
+  const [showAdd, setShowAdd] = useState(false);
+  const [newEmp, setNewEmp] = useState({ name: "", title: "", dept: "Engineering", team: "Platform", email: "" });
+
   const deptOpts = ["All", ...D.DEPT.map(d => d.name)];
-  const list = D.EMP.filter(e => (dept === "All" || e.dept === dept) && (q === "" || e.name.toLowerCase().includes(q.toLowerCase())));
+  const list = employees.filter(e => (dept === "All" || e.dept === dept) && (q === "" || e.name.toLowerCase().includes(q.toLowerCase())));
+
+  const handleAddEmployee = () => {
+    if (!newEmp.name) return;
+    const parts = newEmp.name.split(" ");
+    const emp = {
+      id: "E-" + (100 + employees.length + 1),
+      name: newEmp.name,
+      title: newEmp.title,
+      dept: newEmp.dept,
+      team: newEmp.team,
+      status: "Active",
+      type: "Full-time",
+      loc: "Remote",
+      joined: "Today",
+      initials: (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase(),
+      color: "#0ea5b7",
+      email: newEmp.email || newEmp.name.toLowerCase().replace(/\s+/g, ".") + "@workcentral.io"
+    };
+    setEmployees([emp, ...employees]);
+    setNewEmp({ name: "", title: "", dept: "Engineering", team: "Platform", email: "" });
+    setShowAdd(false);
+    showToast(`Employee "${emp.name}" added successfully`);
+  };
 
   return (
     <div className="page">
-      <PageHead title="Employees" sub={`${D.EMP.length} team members`}
-        actions={<Btn variant="primary" icon="plus">Add employee</Btn>} />
+      <PageHead title="Employees" sub={`${employees.length} team members`}
+        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "Add employee"}</Btn>} />
+
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Full Name</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. John Doe" value={newEmp.name} onChange={e => setNewEmp({...newEmp, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Email</label>
+              <input className="input" type="email" style={{ width: "100%" }} placeholder="e.g. john@company.com" value={newEmp.email} onChange={e => setNewEmp({...newEmp, email: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Job Title</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Software Engineer" value={newEmp.title} onChange={e => setNewEmp({...newEmp, title: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Department</label>
+              <select className="input" style={{ width: "100%" }} value={newEmp.dept} onChange={e => setNewEmp({...newEmp, dept: e.target.value})}>
+                {D.DEPT.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Team</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Web" value={newEmp.team} onChange={e => setNewEmp({...newEmp, team: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddEmployee}>Add Employee</Btn>
+          </div>
+        </Card>
+      )}
+
       <div className="filterbar" style={{ marginBottom:"var(--gap)" }}>
         <Search placeholder="Search employees…" value={q} onChange={setQ} />
         <Select value={dept} options={deptOpts} onChange={setDept} />
@@ -194,12 +384,74 @@ export function Employees() {
 
 // ========== DEPARTMENTS ==========
 export function Departments() {
+  const [departments, setDepartments] = useState(D.DEPT);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newDept, setNewDept] = useState({ name: "", lead: "E-101", count: 0, open: 0, color: "#2f6fdb" });
+
+  const handleAddDepartment = () => {
+    if (!newDept.name) return;
+    const dept = {
+      name: newDept.name,
+      lead: newDept.lead,
+      count: parseInt(newDept.count) || 0,
+      open: parseInt(newDept.open) || 0,
+      color: newDept.color
+    };
+    setDepartments([dept, ...departments]);
+    setNewDept({ name: "", lead: "E-101", count: 0, open: 0, color: "#2f6fdb" });
+    setShowAdd(false);
+    showToast(`Department "${dept.name}" created successfully`);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Departments" sub={`${D.DEPT.length} departments`}
-        actions={<Btn variant="primary" icon="plus">New department</Btn>} />
+      <PageHead title="Departments" sub={`${departments.length} departments`}
+        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New department"}</Btn>} />
+
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Department Name</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Marketing" value={newDept.name} onChange={e => setNewDept({...newDept, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Lead</label>
+              <select className="input" style={{ width: "100%" }} value={newDept.lead} onChange={e => setNewDept({...newDept, lead: e.target.value})}>
+                {D.EMP.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Initial Members</label>
+              <input type="number" className="input" style={{ width: "100%" }} value={newDept.count} onChange={e => setNewDept({...newDept, count: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Open Positions</label>
+              <input type="number" className="input" style={{ width: "100%" }} value={newDept.open} onChange={e => setNewDept({...newDept, open: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Color</label>
+              <select className="input" style={{ width: "100%" }} value={newDept.color} onChange={e => setNewDept({...newDept, color: e.target.value})}>
+                <option value="#2f6fdb">Blue</option>
+                <option value="#0d7d7d">Teal</option>
+                <option value="#6d54d6">Violet</option>
+                <option value="#15935f">Green</option>
+                <option value="#c2790a">Amber</option>
+                <option value="#b3543f">Red</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddDepartment}>Create Department</Btn>
+          </div>
+        </Card>
+      )}
+
       <div className="grid cols-3" style={{ marginBottom:"var(--gap)" }}>
-        {D.DEPT.map(d => (<Card key={d.name} title={d.name} sub={`${d.count} people · ${d.open} open positions`}
+        {departments.map(d => (<Card key={d.name} title={d.name} sub={`${d.count} people · ${d.open} open positions`}
           actions={<Avatar id={d.lead} size={28} />}>
           <div style={{ fontSize: 15, color:"var(--ink-2)", lineHeight:1.6 }}>
             <div>Lead: <strong>{D.empById[d.lead]?.name}</strong></div>
@@ -235,6 +487,7 @@ export function Teams() {
 export function Documents() {
   const [q, setQ] = useState("");
   const list = D.DOCS.filter(d => q === "" || d.name.toLowerCase().includes(q.toLowerCase()));
+  const uploadRef = useRef(null);
 
   const handleDownload = (doc) => {
     const content = "Contenido de prueba para el documento: " + doc.name;
@@ -253,10 +506,21 @@ export function Documents() {
     alert(`👁️ Viendo documento:\n\nNombre: ${doc.name}\nTipo: ${doc.kind}\nTamaño: ${doc.size}\n\n(Esta es una vista previa de prueba)`);
   };
 
+  const handleUpload = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const fileNames = Array.from(e.target.files).map(f => f.name).join(", ");
+      showToast(`Successfully uploaded: ${fileNames}`);
+      e.target.value = null; // reset
+    }
+  };
+
   return (
     <div className="page">
       <PageHead title="Documents" sub={`${D.DOCS.length} documents`}
-        actions={<Btn variant="primary" icon="plus">Upload</Btn>} />
+        actions={<>
+          <input type="file" multiple ref={uploadRef} style={{ display: "none" }} onChange={handleUpload} />
+          <Btn variant="primary" icon="plus" onClick={() => uploadRef.current?.click()}>Upload</Btn>
+        </>} />
       <div className="filterbar" style={{ marginBottom:"var(--gap)" }}>
         <Search placeholder="Search documents…" value={q} onChange={setQ} />
         <div style={{ flex:1 }} />
@@ -291,6 +555,7 @@ export function Files({ access }) {
     { name:"Product Specs", count:31, color:"#6d54d6" }, { name:"People & HR", count:22, color:"#15935f" },
     { name:"Brand & Marketing", count:64, color:"#c2790a" }, { name:"Contracts", count:18, color:"#b3543f" },
   ];
+  const uploadRef = useRef(null);
 
   const handleDownload = (doc) => {
     const content = "Contenido de prueba para el archivo: " + doc.name;
@@ -309,10 +574,22 @@ export function Files({ access }) {
     alert(`👁️ Viendo archivo:\n\nNombre: ${doc.name}\nTipo: ${doc.kind}\nTamaño: ${doc.size}\n\n(Vista previa de prueba)`);
   };
 
+  const handleUpload = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const fileNames = Array.from(e.target.files).map(f => f.name).join(", ");
+      showToast(`Successfully uploaded: ${fileNames}`);
+      e.target.value = null; // reset
+    }
+  };
+
   return (
     <div className="page">
       <PageHead title="Files" sub="Shared company file storage · 2.4 GB of 10 GB used"
-        actions={access === "full" ? <><Btn variant="ghost" icon="folder">New folder</Btn><Btn variant="primary" icon="upload">Upload</Btn></> : <Badge tone="gray" dot>Read-only</Badge>} />
+        actions={access === "full" ? <>
+          <Btn variant="ghost" icon="folder">New folder</Btn>
+          <input type="file" multiple ref={uploadRef} style={{ display: "none" }} onChange={handleUpload} />
+          <Btn variant="primary" icon="upload" onClick={() => uploadRef.current?.click()}>Upload</Btn>
+        </> : <Badge tone="gray" dot>Read-only</Badge>} />
       <div className="ch-title" style={{ fontSize: 15, fontWeight:600, marginBottom:12, color:"var(--ink-2)" }}>Folders</div>
       <div className="grid cols-3" style={{ marginBottom:"calc(var(--gap) + 6px)" }}>
         {folders.map(f => (
@@ -340,16 +617,70 @@ export function Files({ access }) {
 
 // ========== ANNOUNCEMENTS ==========
 export function Announcements() {
+  const [announcements, setAnnouncements] = useState(D.ANNOUNCE);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newAnn, setNewAnn] = useState({ title: "", body: "", dept: "Engineering", pinned: false });
+
+  const handleAddAnnouncement = () => {
+    if (!newAnn.title || !newAnn.body) return;
+    const ann = {
+      id: "A-" + (10 + announcements.length),
+      title: newAnn.title,
+      author: "E-101",
+      dept: newAnn.dept,
+      time: "Just now",
+      pinned: newAnn.pinned,
+      body: newAnn.body
+    };
+    setAnnouncements([ann, ...announcements]);
+    setNewAnn({ title: "", body: "", dept: "Engineering", pinned: false });
+    setShowAdd(false);
+    showToast(`Announcement "${ann.title}" posted successfully`);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Announcements" sub={`${D.ANNOUNCE.length} announcements`}
-        actions={<Btn variant="primary" icon="plus">New announcement</Btn>} />
-      <div className="grid cols-1" style={{ maxWidth:600 }}>
-        {D.ANNOUNCE.map(a => (<Card key={a.id} title={<div style={{ display:"flex", alignItems:"center", gap:7 }}>{a.pinned && <Icon name="pin" size={13} style={{ color:"var(--accent)" }} />}{a.title}</div>}
-          sub={D.empById[a.author]?.name + " · " + a.time}>
-          <div style={{ fontSize: 15, color:"var(--ink-2)", lineHeight:1.6, marginBottom:12 }}>{a.body}</div>
-          <Badge tone="gray" dot>{a.dept}</Badge>
-        </Card>))}
+      <PageHead title="Announcements" sub={`${announcements.length} announcements`}
+        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New announcement"}</Btn>} />
+      
+      <div style={{ maxWidth:600 }}>
+        {showAdd && (
+          <Card style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 14 }}>
+              <label className="fieldlabel">Title</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. System Maintenance" value={newAnn.title} onChange={e => setNewAnn({...newAnn, title: e.target.value})} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="fieldlabel">Message</label>
+              <textarea className="input" style={{ width: "100%", height: 100, padding: "10px 12px", resize: "vertical", fontFamily: "inherit" }} placeholder="Write your announcement here..." value={newAnn.body} onChange={e => setNewAnn({...newAnn, body: e.target.value})} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20, alignItems: "center" }}>
+              <div>
+                <label className="fieldlabel">Department</label>
+                <select className="input" style={{ width: "100%" }} value={newAnn.dept} onChange={e => setNewAnn({...newAnn, dept: e.target.value})}>
+                  <option value="General">General (All Company)</option>
+                  {D.DEPT.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 20 }}>
+                <input type="checkbox" id="pinned-check" checked={newAnn.pinned} onChange={e => setNewAnn({...newAnn, pinned: e.target.checked})} style={{ width: 16, height: 16 }} />
+                <label htmlFor="pinned-check" style={{ fontSize: 14, cursor: "pointer" }}>Pin to top</label>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleAddAnnouncement}>Post Announcement</Btn>
+            </div>
+          </Card>
+        )}
+
+        <div className="grid cols-1">
+          {announcements.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).map(a => (<Card key={a.id} title={<div style={{ display:"flex", alignItems:"center", gap:7 }}>{a.pinned && <Icon name="pin" size={13} style={{ color:"var(--accent)" }} />}{a.title}</div>}
+            sub={D.empById[a.author]?.name + " · " + a.time}>
+            <div style={{ fontSize: 15, color:"var(--ink-2)", lineHeight:1.6, marginBottom:12 }}>{a.body}</div>
+            <Badge tone="gray" dot>{a.dept}</Badge>
+          </Card>))}
+        </div>
       </div>
     </div>
   );
@@ -357,15 +688,87 @@ export function Announcements() {
 
 // ========== CLIENTS ==========
 export function Clients() {
+  const [clients, setClients] = useState(D.CLIENTS);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newClient, setNewClient] = useState({ name: "", industry: "Technology", contact: "", health: "New", status: "Prospect", mrr: "$0" });
+
+  const handleAddClient = () => {
+    if (!newClient.name) return;
+    const client = {
+      id: "C-0" + (clients.length + 1),
+      name: newClient.name,
+      industry: newClient.industry,
+      contact: newClient.contact || "—",
+      status: newClient.status,
+      since: new Date().getFullYear().toString(),
+      projects: 0,
+      health: newClient.health,
+      mrr: newClient.mrr,
+      color: "#2f6fdb"
+    };
+    setClients([client, ...clients]);
+    setNewClient({ name: "", industry: "Technology", contact: "", health: "New", status: "Prospect", mrr: "$0" });
+    setShowAdd(false);
+    showToast(`Client "${client.name}" added successfully`);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Clients" sub={`${D.CLIENTS.length} clients`}
-        actions={<Btn variant="primary" icon="plus">New client</Btn>} />
+      <PageHead title="Clients" sub={`${clients.length} clients`}
+        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New client"}</Btn>} />
+      
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Company Name</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Acme Corp" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Contact Person</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Jane Doe" value={newClient.contact} onChange={e => setNewClient({...newClient, contact: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Industry</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Retail" value={newClient.industry} onChange={e => setNewClient({...newClient, industry: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Status</label>
+              <select className="input" style={{ width: "100%" }} value={newClient.status} onChange={e => setNewClient({...newClient, status: e.target.value})}>
+                <option value="Prospect">Prospect</option>
+                <option value="Active">Active</option>
+                <option value="Churned">Churned</option>
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Health</label>
+              <select className="input" style={{ width: "100%" }} value={newClient.health} onChange={e => setNewClient({...newClient, health: e.target.value})}>
+                <option value="New">New</option>
+                <option value="Good">Good</option>
+                <option value="Excellent">Excellent</option>
+                <option value="At risk">At risk</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Est. MRR</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. $5,000" value={newClient.mrr} onChange={e => setNewClient({...newClient, mrr: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddClient}>Add Client</Btn>
+          </div>
+        </Card>
+      )}
+
       <Card flush>
         <table className="table">
           <thead><tr><th>Client</th><th>Industry</th><th>Contact</th><th>Projects</th><th>Health</th><th>MRR</th><th>Status</th></tr></thead>
           <tbody>
-            {D.CLIENTS.map(c => (<tr key={c.id}>
+            {clients.map(c => (<tr key={c.id}>
               <td><div className="t-strong">{c.name}</div><div className="muted" style={{ fontSize: 13.5 }}>{c.id}</div></td>
               <td>{c.industry}</td>
               <td>{c.contact}</td>
@@ -383,15 +786,71 @@ export function Clients() {
 
 // ========== INVOICES ==========
 export function Invoices() {
+  const [invoices, setInvoices] = useState(D.INVOICES);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newInvoice, setNewInvoice] = useState({ client: D.CLIENTS[0]?.name || "", amount: "$0", due: "TBD", status: "Draft" });
+
+  const handleAddInvoice = () => {
+    if (!newInvoice.client || newInvoice.amount === "$0") return;
+    const inv = {
+      id: "INV-" + (2040 + invoices.length + 1),
+      client: newInvoice.client,
+      amount: newInvoice.amount,
+      issued: "Today",
+      due: newInvoice.due,
+      status: newInvoice.status
+    };
+    setInvoices([inv, ...invoices]);
+    setNewInvoice({ client: D.CLIENTS[0]?.name || "", amount: "$0", due: "TBD", status: "Draft" });
+    setShowAdd(false);
+    showToast(`Invoice "${inv.id}" created successfully`);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Invoices" sub={`${D.INVOICES.length} invoices`}
-        actions={<Btn variant="primary" icon="plus">New invoice</Btn>} />
+      <PageHead title="Invoices" sub={`${invoices.length} invoices`}
+        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New invoice"}</Btn>} />
+      
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Client</label>
+              <select className="input" style={{ width: "100%" }} value={newInvoice.client} onChange={e => setNewInvoice({...newInvoice, client: e.target.value})}>
+                {D.CLIENTS.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Amount</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. $1,500" value={newInvoice.amount} onChange={e => setNewInvoice({...newInvoice, amount: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Due Date</label>
+              <input type="date" className="input" style={{ width: "100%" }} value={newInvoice.due} onChange={e => setNewInvoice({...newInvoice, due: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Status</label>
+              <select className="input" style={{ width: "100%" }} value={newInvoice.status} onChange={e => setNewInvoice({...newInvoice, status: e.target.value})}>
+                <option value="Draft">Draft</option>
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddInvoice}>Create Invoice</Btn>
+          </div>
+        </Card>
+      )}
+
       <Card flush>
         <table className="table">
           <thead><tr><th>Invoice</th><th>Client</th><th>Amount</th><th>Issued</th><th>Due</th><th>Status</th></tr></thead>
           <tbody>
-            {D.INVOICES.map(i => (<tr key={i.id}>
+            {invoices.map(i => (<tr key={i.id}>
               <td><div className="mono t-strong">{i.id}</div></td>
               <td>{i.client}</td>
               <td className="mono">{i.amount}</td>
@@ -646,9 +1105,17 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
   ]);
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", email: "", role: "employee" });
+  const photoUploadRef = useRef(null);
   const tg = k => setToggles(s => ({ ...s, [k]: !s[k] }));
   const roleObj = D.ROLES.find(r => r.key === role);
   const tabs = ["Profile","Notifications","Security","Appearance"].concat(role === "admin" ? ["Workspace","Team Management"] : []);
+
+  const handlePhotoUpload = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      showToast(`Photo updated successfully: ${e.target.files[0].name}`);
+      e.target.value = null; // reset
+    }
+  };
 
   return (
     <div className="page" style={{ maxWidth:980 }}>
@@ -664,7 +1131,8 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
               <div className="muted" style={{ fontSize: 15 }}>{currentUser.title} · {currentUser.email || "guest@external.com"}</div>
               <div style={{ marginTop:8 }}><Badge tone="teal" dot>{roleObj.name}</Badge></div>
             </div>
-            <Btn variant="ghost" icon="upload">Change photo</Btn>
+            <input type="file" accept="image/*" ref={photoUploadRef} style={{ display: "none" }} onChange={handlePhotoUpload} />
+            <Btn variant="ghost" icon="upload" onClick={() => photoUploadRef.current?.click()}>Change photo</Btn>
           </div>
           <div className="grid cols-2" style={{ marginTop:18 }}>
             <div><label className="fieldlabel">Full name</label><input className="input" style={{ width:"100%" }} defaultValue={currentUser.name} /></div>
@@ -812,6 +1280,10 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
 
 // ========== SCHEDULE (stub) ==========
 export function Schedule({ role, currentUser }) {
+  const [schedule, setSchedule] = useState(D.SCHEDULE);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: "", type: "meeting", day: 1, start: 9, len: 1 });
+
   const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
   const DATES = ["2","3","4","5","6"];
   const EV_COLOR = {
@@ -824,7 +1296,23 @@ export function Schedule({ role, currentUser }) {
 
   const startH = 8, endH = 18, hourH = 52;
   const personal = role === "employee";
-  const events = personal ? D.SCHEDULE.filter(e => e.who === currentUser.id || ["meeting"].includes(e.type)) : D.SCHEDULE;
+  const events = personal ? schedule.filter(e => e.who === currentUser.id || ["meeting"].includes(e.type)) : schedule;
+
+  const handleAddEvent = () => {
+    if (!newEvent.title) return;
+    const ev = {
+      who: currentUser.id,
+      type: newEvent.type,
+      title: newEvent.title,
+      day: parseInt(newEvent.day),
+      start: parseFloat(newEvent.start),
+      len: parseFloat(newEvent.len)
+    };
+    setSchedule([...schedule, ev]);
+    setNewEvent({ title: "", type: "meeting", day: 1, start: 9, len: 1 });
+    setShowAdd(false);
+    showToast(`Event "${ev.title}" scheduled successfully`);
+  };
 
   return (
     <div className="page">
@@ -833,8 +1321,59 @@ export function Schedule({ role, currentUser }) {
           <Btn variant="ghost" icon="chevronLeft" />
           <span style={{ fontSize: 15, fontWeight:600, minWidth:150, textAlign:"center" }}>Jun 2 – 6, 2026</span>
           <Btn variant="ghost" icon="chevronRight" />
-          <Btn variant="primary" icon="plus">Event</Btn>
+          <Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "Event"}</Btn>
         </>} />
+
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Event Title</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Weekly Sync" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Event Type</label>
+              <select className="input" style={{ width: "100%" }} value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})}>
+                <option value="meeting">Meeting</option>
+                <option value="focus">Focus Time</option>
+                <option value="review">Review</option>
+                <option value="client">Client Call</option>
+                <option value="interview">Interview</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Day of Week</label>
+              <select className="input" style={{ width: "100%" }} value={newEvent.day} onChange={e => setNewEvent({...newEvent, day: e.target.value})}>
+                {DAYS.map((d, i) => <option key={i} value={i + 1}>{d}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Start Time (24h)</label>
+              <select className="input" style={{ width: "100%" }} value={newEvent.start} onChange={e => setNewEvent({...newEvent, start: e.target.value})}>
+                {Array.from({ length: 21 }).map((_, i) => <option key={i} value={8 + (i * 0.5)}>{8 + Math.floor(i * 0.5)}:{i % 2 === 0 ? "00" : "30"}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Duration (Hours)</label>
+              <select className="input" style={{ width: "100%" }} value={newEvent.len} onChange={e => setNewEvent({...newEvent, len: e.target.value})}>
+                <option value="0.5">30 mins</option>
+                <option value="1">1 hour</option>
+                <option value="1.5">1.5 hours</option>
+                <option value="2">2 hours</option>
+                <option value="3">3 hours</option>
+                <option value="4">4 hours</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddEvent}>Schedule Event</Btn>
+          </div>
+        </Card>
+      )}
+
       <Card flush>
         <div style={{ overflowX:"auto" }}>
           <div style={{ minWidth:760 }}>
