@@ -69,10 +69,37 @@ export function Progress({ value, color, thin }) {
   return <div className={"progress" + (thin ? " thin" : "")}><span style={{ width: value + "%", ...(color?{background:color}:{}) }} /></div>;
 }
 
-export function Btn({ variant = "ghost", sm, icon, iconRight, children, onClick, style, title }) {
+export function showToast(message, type = "success") {
+  const div = document.createElement("div");
+  div.className = "permission-toast"; // Reusing the toast style from App.jsx
+  div.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${type === 'success' ? '✅ Action Successful' : 'ℹ️ Info'}</div><div style="opacity:0.9;font-size:12px">${message}</div>`;
+  document.body.appendChild(div);
+  setTimeout(() => {
+    div.style.opacity = '0';
+    div.style.transform = 'translateX(100px)';
+    div.style.transition = 'all 0.3s ease';
+    setTimeout(() => {
+      if (document.body.contains(div)) document.body.removeChild(div);
+    }, 300);
+  }, 3000);
+}
+
+export function Btn({ variant = "ghost", sm, icon, iconRight, children, onClick, style, title, type = "button" }) {
   const cls = ["btn", "btn-" + variant, sm ? "btn-sm" : "", !children ? "btn-icon" : ""].join(" ");
+  
+  const handleClick = (e) => {
+    if (onClick) {
+      onClick(e);
+    } else {
+      e.preventDefault();
+      // Simulate mock action for buttons without a defined handler
+      const actionName = children || title || icon || "Action";
+      showToast(`The action "${actionName}" was executed correctly. (Mock mode)`);
+    }
+  };
+
   return (
-    <button className={cls} onClick={onClick} style={style} title={title}>
+    <button type={type} className={cls} onClick={handleClick} style={style} title={title}>
       {icon && <Icon name={icon} size={sm ? 15 : 16} />}
       {children}
       {iconRight && <Icon name={iconRight} size={sm ? 15 : 16} />}
