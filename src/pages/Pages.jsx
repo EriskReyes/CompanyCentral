@@ -284,75 +284,218 @@ export function Tasks({ access, role, currentUser }) {
 }
 
 // ========== EMPLOYEES ==========
-export function Employees() {
+const EMPTY_EMP = {
+  firstName:"", lastName:"", email:"", phone:"",
+  title:"", dept:"Engineering", team:"", role:"employee", empType:"Full-time", startDate:"", location:"",
+  address:{ street:"", city:"", state:"", zip:"", country:"" },
+  emergencyName:"", emergencyPhone:"", emergencyRelation:"",
+  notes:"",
+};
+
+export function Employees({ company }) {
   const [employees, setEmployees] = useState(D.EMP);
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("All");
   const [showAdd, setShowAdd] = useState(false);
-  const [newEmp, setNewEmp] = useState({ name: "", title: "", dept: "Engineering", team: "Platform", email: "" });
+  const [newEmp, setNewEmp] = useState(EMPTY_EMP);
+  const [formSection, setFormSection] = useState("personal");
+  const [createdCreds, setCreatedCreds] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editingCode, setEditingCode] = useState(null); // {id, code}
 
   const deptOpts = ["All", ...D.DEPT.map(d => d.name)];
-  const list = employees.filter(e => (dept === "All" || e.dept === dept) && (q === "" || e.name.toLowerCase().includes(q.toLowerCase())));
+  const list = employees.filter(e =>
+    (dept === "All" || e.dept === dept) &&
+    (q === "" || e.name?.toLowerCase().includes(q.toLowerCase()) || e.email?.toLowerCase().includes(q.toLowerCase()))
+  );
 
-  const handleAddEmployee = () => {
-    if (!newEmp.name) return;
-    const parts = newEmp.name.split(" ");
-    const emp = {
-      id: "E-" + (100 + employees.length + 1),
-      name: newEmp.name,
-      title: newEmp.title,
-      dept: newEmp.dept,
-      team: newEmp.team,
-      status: "Active",
-      type: "Full-time",
-      loc: "Remote",
-      joined: "Today",
-      initials: (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase(),
-      color: "#0ea5b7",
-      email: newEmp.email || newEmp.name.toLowerCase().replace(/\s+/g, ".") + "@workcentral.io"
-    };
-    setEmployees([emp, ...employees]);
-    setNewEmp({ name: "", title: "", dept: "Engineering", team: "Platform", email: "" });
-    setShowAdd(false);
-    showToast(`Employee "${emp.name}" added successfully`);
+  const set = (field, val) => setNewEmp(p => ({ ...p, [field]: val }));
+  const setAddr = (field, val) => setNewEmp(p => ({ ...p, address: { ...p.address, [field]: val } }));
+
+  const handleAddEmployee = async () => {
+    if (!newEmp.firstName || !newEmp.email) {
+      showToast("First name and email are required", "error"); return;
+    }
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch("/api/team/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(newEmp),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create employee");
+
+      setEmployees(prev => [{
+        id: data.id, name: data.name,
+        title: data.title, dept: data.dept, team: data.team || "—",
+        status: data.status, type: data.empType,
+        email: data.email, initials: data.initials, color: data.color,
+        employeeCode: data.employeeCode,
+      }, ...prev]);
+
+      setCreatedCreds({ employeeCode: data.employeeCode, tempPassword: data.tempPassword, name: data.name });
+      setNewEmp(EMPTY_EMP);
+      setShowAdd(false);
+      setFormSection("personal");
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleUpdateCode = async (id, newCode) => {
+    if (!newCode.trim()) return;
+    const token = localStorage.getItem("authToken");
+    const res = await fetch(`/api/team/members/${id}/code`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ employeeCode: newCode }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error, "error"); return; }
+    setEmployees(prev => prev.map(e => e.id === id ? { ...e, employeeCode: data.employeeCode } : e));
+    setEditingCode(null);
+    showToast("Employee code updated");
+  };
+
+  const SECTIONS = ["personal","address","employment","emergency"];
+  const SECTION_LABELS = { personal:"Personal", address:"Address", employment:"Employment", emergency:"Emergency" };
 
   return (
     <div className="page">
       <PageHead title="Employees" sub={`${employees.length} team members`}
-        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "Add employee"}</Btn>} />
+        actions={<Btn variant="primary" icon="plus" onClick={() => { setShowAdd(!showAdd); setCreatedCreds(null); }}>{showAdd ? "Cancel" : "Add employee"}</Btn>} />
 
+      {/* Credentials card — shown once after creation */}
+      {createdCreds && (
+        <Card style={{ marginBottom: 20, border: "1.5px solid var(--green)", background:"var(--surface)" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+            <div style={{ width:32, height:32, borderRadius:99, background:"var(--green-soft)", display:"grid", placeItems:"center", color:"var(--green)", fontSize:18 }}>✓</div>
+            <div style={{ fontWeight:700, fontSize:17 }}>{createdCreds.name} created successfully</div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, padding:"16px", background:"var(--surface-2)", borderRadius:"var(--r-lg)", marginBottom:14 }}>
+            <div>
+              <div className="fieldlabel">Company ID</div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:17, fontWeight:700, color:"var(--accent)", letterSpacing:".04em" }}>{company?.companyId || "—"}</div>
+            </div>
+            <div>
+              <div className="fieldlabel">Employee Code</div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:17, fontWeight:700, color:"var(--ink)", letterSpacing:".04em" }}>{createdCreds.employeeCode}</div>
+            </div>
+            <div>
+              <div className="fieldlabel">Temporary Password</div>
+              <div style={{ fontFamily:"var(--mono)", fontSize:17, fontWeight:700, color:"var(--ink)", letterSpacing:".04em" }}>{createdCreds.tempPassword}</div>
+            </div>
+          </div>
+          <div style={{ fontSize:13.5, color:"var(--muted)", marginBottom:12 }}>
+            Share these credentials with the employee. They log in with: <strong>Employee Code tab</strong> → Company ID + Employee Code + Temporary Password.
+          </div>
+          <Btn variant="ghost" sm onClick={() => setCreatedCreds(null)}>Dismiss</Btn>
+        </Card>
+      )}
+
+      {/* Add employee form — sectioned */}
       {showAdd && (
         <Card style={{ marginBottom: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-            <div>
-              <label className="fieldlabel">Full Name</label>
-              <input className="input" style={{ width: "100%" }} placeholder="e.g. John Doe" value={newEmp.name} onChange={e => setNewEmp({...newEmp, name: e.target.value})} />
-            </div>
-            <div>
-              <label className="fieldlabel">Email</label>
-              <input className="input" type="email" style={{ width: "100%" }} placeholder="e.g. john@company.com" value={newEmp.email} onChange={e => setNewEmp({...newEmp, email: e.target.value})} />
-            </div>
+          {/* Section tabs */}
+          <div style={{ display:"flex", gap:6, marginBottom:20, borderBottom:"1px solid var(--line-2)", paddingBottom:14 }}>
+            {SECTIONS.map(s => (
+              <button key={s} onClick={() => setFormSection(s)} type="button"
+                style={{ padding:"6px 14px", borderRadius:"var(--r-md)", border:"none", cursor:"pointer",
+                  background: formSection===s ? "var(--accent)" : "var(--surface-2)",
+                  color: formSection===s ? "#fff" : "var(--ink-2)",
+                  fontWeight: formSection===s ? 700 : 500, fontSize:14 }}>
+                {SECTION_LABELS[s]}
+              </button>
+            ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 20 }}>
-            <div>
-              <label className="fieldlabel">Job Title</label>
-              <input className="input" style={{ width: "100%" }} placeholder="e.g. Software Engineer" value={newEmp.title} onChange={e => setNewEmp({...newEmp, title: e.target.value})} />
+
+          {formSection === "personal" && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              <div><label className="fieldlabel">First Name *</label>
+                <input className="input" style={{ width:"100%" }} placeholder="John" value={newEmp.firstName} onChange={e => set("firstName", e.target.value)} /></div>
+              <div><label className="fieldlabel">Last Name</label>
+                <input className="input" style={{ width:"100%" }} placeholder="Doe" value={newEmp.lastName} onChange={e => set("lastName", e.target.value)} /></div>
+              <div><label className="fieldlabel">Email *</label>
+                <input className="input" type="email" style={{ width:"100%" }} placeholder="john@company.com" value={newEmp.email} onChange={e => set("email", e.target.value)} /></div>
+              <div><label className="fieldlabel">Phone</label>
+                <input className="input" style={{ width:"100%" }} placeholder="+1 555 000 0000" value={newEmp.phone} onChange={e => set("phone", e.target.value)} /></div>
             </div>
-            <div>
-              <label className="fieldlabel">Department</label>
-              <select className="input" style={{ width: "100%" }} value={newEmp.dept} onChange={e => setNewEmp({...newEmp, dept: e.target.value})}>
-                {D.DEPT.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
-              </select>
+          )}
+
+          {formSection === "address" && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              <div style={{ gridColumn:"1/-1" }}><label className="fieldlabel">Street Address</label>
+                <input className="input" style={{ width:"100%" }} placeholder="123 Main St" value={newEmp.address.street} onChange={e => setAddr("street", e.target.value)} /></div>
+              <div><label className="fieldlabel">City</label>
+                <input className="input" style={{ width:"100%" }} placeholder="New York" value={newEmp.address.city} onChange={e => setAddr("city", e.target.value)} /></div>
+              <div><label className="fieldlabel">State / Province</label>
+                <input className="input" style={{ width:"100%" }} placeholder="NY" value={newEmp.address.state} onChange={e => setAddr("state", e.target.value)} /></div>
+              <div><label className="fieldlabel">ZIP / Postal Code</label>
+                <input className="input" style={{ width:"100%" }} placeholder="10001" value={newEmp.address.zip} onChange={e => setAddr("zip", e.target.value)} /></div>
+              <div><label className="fieldlabel">Country</label>
+                <input className="input" style={{ width:"100%" }} placeholder="United States" value={newEmp.address.country} onChange={e => setAddr("country", e.target.value)} /></div>
             </div>
-            <div>
-              <label className="fieldlabel">Team</label>
-              <input className="input" style={{ width: "100%" }} placeholder="e.g. Web" value={newEmp.team} onChange={e => setNewEmp({...newEmp, team: e.target.value})} />
+          )}
+
+          {formSection === "employment" && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              <div><label className="fieldlabel">Job Title</label>
+                <input className="input" style={{ width:"100%" }} placeholder="Software Engineer" value={newEmp.title} onChange={e => set("title", e.target.value)} /></div>
+              <div><label className="fieldlabel">Department</label>
+                <select className="input" style={{ width:"100%" }} value={newEmp.dept} onChange={e => set("dept", e.target.value)}>
+                  {D.DEPT.map(d => <option key={d.name}>{d.name}</option>)}
+                </select></div>
+              <div><label className="fieldlabel">Team</label>
+                <input className="input" style={{ width:"100%" }} placeholder="Web" value={newEmp.team} onChange={e => set("team", e.target.value)} /></div>
+              <div><label className="fieldlabel">Role</label>
+                <select className="input" style={{ width:"100%" }} value={newEmp.role} onChange={e => set("role", e.target.value)}>
+                  {D.ROLES.filter(r => r.key !== "guest").map(r => <option key={r.key} value={r.key}>{r.name}</option>)}
+                </select></div>
+              <div><label className="fieldlabel">Employment Type</label>
+                <select className="input" style={{ width:"100%" }} value={newEmp.empType} onChange={e => set("empType", e.target.value)}>
+                  {["Full-time","Part-time","Contract","Intern"].map(t => <option key={t}>{t}</option>)}
+                </select></div>
+              <div><label className="fieldlabel">Start Date</label>
+                <input type="date" className="input" style={{ width:"100%" }} value={newEmp.startDate} onChange={e => set("startDate", e.target.value)} /></div>
+              <div><label className="fieldlabel">Location</label>
+                <input className="input" style={{ width:"100%" }} placeholder="San Francisco / Remote" value={newEmp.location} onChange={e => set("location", e.target.value)} /></div>
+              <div style={{ gridColumn:"1/-1" }}><label className="fieldlabel">Notes</label>
+                <textarea className="input" style={{ width:"100%", height:72, padding:"8px 12px", resize:"vertical", fontFamily:"inherit" }} placeholder="Any additional notes..." value={newEmp.notes} onChange={e => set("notes", e.target.value)} /></div>
             </div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
-            <Btn variant="primary" onClick={handleAddEmployee}>Add Employee</Btn>
+          )}
+
+          {formSection === "emergency" && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              <div style={{ gridColumn:"1/-1", padding:"12px 14px", background:"var(--accent-soft)", borderRadius:"var(--r-md)", fontSize:14, color:"var(--accent-ink)" }}>
+                Emergency contact information — used only in case of workplace emergencies.
+              </div>
+              <div><label className="fieldlabel">Contact Name</label>
+                <input className="input" style={{ width:"100%" }} placeholder="Jane Doe" value={newEmp.emergencyName} onChange={e => set("emergencyName", e.target.value)} /></div>
+              <div><label className="fieldlabel">Contact Phone</label>
+                <input className="input" style={{ width:"100%" }} placeholder="+1 555 000 0001" value={newEmp.emergencyPhone} onChange={e => set("emergencyPhone", e.target.value)} /></div>
+              <div><label className="fieldlabel">Relationship</label>
+                <select className="input" style={{ width:"100%" }} value={newEmp.emergencyRelation} onChange={e => set("emergencyRelation", e.target.value)}>
+                  <option value="">Select…</option>
+                  {["Spouse","Parent","Sibling","Partner","Friend","Other"].map(r => <option key={r}>{r}</option>)}
+                </select></div>
+            </div>
+          )}
+
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:20, paddingTop:14, borderTop:"1px solid var(--line-2)" }}>
+            <div style={{ display:"flex", gap:6 }}>
+              {SECTIONS.map(s => <div key={s} style={{ width:8, height:8, borderRadius:99, background: formSection===s ? "var(--accent)" : "var(--line)" }} />)}
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+              {formSection !== "emergency"
+                ? <Btn variant="soft" onClick={() => setFormSection(SECTIONS[SECTIONS.indexOf(formSection)+1])}>Next →</Btn>
+                : <Btn variant="primary" onClick={handleAddEmployee} disabled={saving}>{saving ? "Creating…" : "Create Employee"}</Btn>
+              }
+            </div>
           </div>
         </Card>
       )}
@@ -364,19 +507,47 @@ export function Employees() {
         <span className="muted" style={{ fontSize: 14.5 }}>{list.length} employees</span>
       </div>
       <Card flush>
-        <table className="table">
-          <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Team</th><th>Status</th><th>Email</th></tr></thead>
-          <tbody>
-            {list.map(e => (<tr key={e.id}>
-              <td><Person id={e.id} /></td>
-              <td style={{ fontSize: 15 }}>{e.title}</td>
-              <td>{e.dept}</td>
-              <td>{e.team}</td>
-              <td><StatusBadge value={e.status} /></td>
-              <td className="t-mono" style={{ fontSize: 14.5 }}>{e.email}</td>
-            </tr>))}
-          </tbody>
-        </table>
+        <div style={{ overflowX:"auto" }}>
+          <table className="table">
+            <thead><tr><th>Name</th><th>Code</th><th>Title</th><th>Department</th><th>Type</th><th>Status</th><th>Email</th></tr></thead>
+            <tbody>
+              {list.map(e => (
+                <tr key={e.id}>
+                  <td>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div className="avatar" style={{ width:32, height:32, background: e.color||"#6b7a8d", fontSize:12, borderRadius:99, display:"grid", placeItems:"center", color:"#fff", fontWeight:700, flexShrink:0 }}>{e.initials||"?"}</div>
+                      <div>
+                        <div className="t-strong">{e.name}</div>
+                        <div className="muted" style={{ fontSize:13 }}>{e.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {editingCode?.id === e.id ? (
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <input className="input" style={{ width:110, padding:"4px 8px", fontFamily:"var(--mono)", fontSize:13 }}
+                          value={editingCode.code} onChange={ev => setEditingCode({ ...editingCode, code: ev.target.value })}
+                          onKeyDown={ev => { if (ev.key==="Enter") handleUpdateCode(e.id, editingCode.code); if (ev.key==="Escape") setEditingCode(null); }} autoFocus />
+                        <Btn variant="primary" sm onClick={() => handleUpdateCode(e.id, editingCode.code)}>Save</Btn>
+                        <Btn variant="ghost" sm onClick={() => setEditingCode(null)}>✕</Btn>
+                      </div>
+                    ) : (
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ fontFamily:"var(--mono)", fontSize:13, fontWeight:600, color:"var(--accent-ink)", background:"var(--accent-soft)", padding:"3px 8px", borderRadius:"var(--r-sm)" }}>{e.employeeCode||"—"}</span>
+                        <Btn variant="ghost" sm icon="edit" onClick={() => setEditingCode({ id:e.id, code:e.employeeCode||"" })} />
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ fontSize:15 }}>{e.title}</td>
+                  <td>{e.dept}</td>
+                  <td><span className="muted" style={{ fontSize:14 }}>{e.type||e.empType}</span></td>
+                  <td><StatusBadge value={e.status} /></td>
+                  <td className="t-mono" style={{ fontSize:14.5 }}>{e.email}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );
@@ -466,11 +637,58 @@ export function Departments() {
 
 // ========== TEAMS ==========
 export function Teams() {
+  const [teams, setTeams] = useState(D.TEAMS);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTeam, setNewTeam] = useState({ name: "", dept: "Engineering", focus: "", lead: "E-101" });
+
+  const handleAddTeam = () => {
+    if (!newTeam.name) return;
+    setTeams([...teams, { name: newTeam.name, dept: newTeam.dept, lead: newTeam.lead, members: [newTeam.lead], focus: newTeam.focus }]);
+    setNewTeam({ name: "", dept: "Engineering", focus: "", lead: "E-101" });
+    setShowAdd(false);
+    showToast(`Team "${newTeam.name}" created successfully`);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Teams" sub={`${D.TEAMS.length} teams`} />
+      <PageHead title="Teams" sub={`${teams.length} teams`}
+        actions={<Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "New team"}</Btn>} />
+
+      {showAdd && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Team Name</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Frontend" value={newTeam.name} onChange={e => setNewTeam({...newTeam, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Department</label>
+              <select className="input" style={{ width: "100%" }} value={newTeam.dept} onChange={e => setNewTeam({...newTeam, dept: e.target.value})}>
+                {D.DEPT.map(d => <option key={d.name}>{d.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Focus</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Customer-facing features" value={newTeam.focus} onChange={e => setNewTeam({...newTeam, focus: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Team Lead</label>
+              <select className="input" style={{ width: "100%" }} value={newTeam.lead} onChange={e => setNewTeam({...newTeam, lead: e.target.value})}>
+                {D.EMP.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowAdd(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleAddTeam}>Create Team</Btn>
+          </div>
+        </Card>
+      )}
+
       <div className="grid cols-2" style={{ marginBottom:"var(--gap)" }}>
-        {D.TEAMS.map(t => (<Card key={t.name} title={t.name} sub={t.focus}
+        {teams.map(t => (<Card key={t.name} title={t.name} sub={t.focus}
           actions={<Avatar id={t.lead} size={28} />}>
           <div style={{ fontSize: 15, lineHeight:1.8 }}>
             <div><span className="muted">Department:</span> {t.dept}</div>
@@ -550,12 +768,22 @@ export function Documents() {
 
 // ========== FILES ==========
 export function Files({ access }) {
-  const folders = [
+  const [folders, setFolders] = useState([
     { name:"Engineering", count:48, color:"#2f6fdb" }, { name:"Design Assets", count:126, color:"#0d7d7d" },
     { name:"Product Specs", count:31, color:"#6d54d6" }, { name:"People & HR", count:22, color:"#15935f" },
     { name:"Brand & Marketing", count:64, color:"#c2790a" }, { name:"Contracts", count:18, color:"#b3543f" },
-  ];
+  ]);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const uploadRef = useRef(null);
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    setFolders([...folders, { name: newFolderName.trim(), count: 0, color: "#6b7a8d" }]);
+    showToast(`Folder "${newFolderName.trim()}" created`);
+    setNewFolderName("");
+    setShowNewFolder(false);
+  };
 
   const handleDownload = (doc) => {
     const content = "Contenido de prueba para el archivo: " + doc.name;
@@ -586,10 +814,19 @@ export function Files({ access }) {
     <div className="page">
       <PageHead title="Files" sub="Shared company file storage · 2.4 GB of 10 GB used"
         actions={access === "full" ? <>
-          <Btn variant="ghost" icon="folder">New folder</Btn>
+          <Btn variant="ghost" icon="folder" onClick={() => setShowNewFolder(!showNewFolder)}>New folder</Btn>
           <input type="file" multiple ref={uploadRef} style={{ display: "none" }} onChange={handleUpload} />
           <Btn variant="primary" icon="upload" onClick={() => uploadRef.current?.click()}>Upload</Btn>
         </> : <Badge tone="gray" dot>Read-only</Badge>} />
+
+      {showNewFolder && (
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16, padding: "12px 16px", background: "var(--surface-2)", borderRadius: "var(--r-lg)", border: "1px solid var(--line)" }}>
+          <input className="input" style={{ flex: 1 }} placeholder="Folder name…" value={newFolderName} onChange={e => setNewFolderName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleCreateFolder(); }} autoFocus />
+          <Btn variant="ghost" onClick={() => setShowNewFolder(false)}>Cancel</Btn>
+          <Btn variant="primary" onClick={handleCreateFolder}>Create</Btn>
+        </div>
+      )}
+
       <div className="ch-title" style={{ fontSize: 15, fontWeight:600, marginBottom:12, color:"var(--ink-2)" }}>Folders</div>
       <div className="grid cols-3" style={{ marginBottom:"calc(var(--gap) + 6px)" }}>
         {folders.map(f => (
@@ -867,9 +1104,23 @@ export function Invoices() {
 
 // ========== REPORTS ==========
 export function Reports() {
+  const handleExport = () => {
+    const csv = ["Metric,Value",
+      "Total tasks done,124","Tasks in progress,48","Tasks in review,21",
+      "Tasks todo,63","Tasks blocked,7",
+      "Monthly revenue Jun,$278k","Active employees,142","Ongoing projects,6"
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "reports.csv";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="page">
-      <PageHead title="Reports" />
+      <PageHead title="Reports" actions={<Btn variant="ghost" icon="download" onClick={handleExport}>Export CSV</Btn>} />
       <div className="grid cols-2" style={{ marginBottom:"var(--gap)" }}>
         <Card title="Task Status" sub="Current distribution">
           <Donut data={D.REPORTS.taskStatus} size={160} center={D.REPORTS.taskStatus.reduce((s,d)=>s+d.val,0)} />
@@ -1033,13 +1284,60 @@ function MiniCalendar() {
   );
 }
 
-export function Meetings({ role }) {
+export function Meetings({ role, onNavigate }) {
   const guest = role === "guest";
   const list = guest ? D.MEETINGS.slice(0,1) : D.MEETINGS;
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [newMeeting, setNewMeeting] = useState({ title: "", room: "Zoom", day: "Today", time: "09:00" });
+
+  const handleSchedule = () => {
+    if (!newMeeting.title) return;
+    showToast(`Meeting "${newMeeting.title}" scheduled successfully`);
+    setNewMeeting({ title: "", room: "Zoom", day: "Today", time: "09:00" });
+    setShowSchedule(false);
+  };
+
   return (
     <div className="page">
       <PageHead title="Meetings" sub={guest ? "Meetings you're invited to" : "Your upcoming meetings"}
-        actions={!guest && <><Btn variant="ghost" icon="calendar">Calendar</Btn><Btn variant="primary" icon="plus">Schedule</Btn></>} />
+        actions={!guest && <>
+          <Btn variant="ghost" icon="calendar" onClick={() => onNavigate?.("schedule")}>Calendar</Btn>
+          <Btn variant="primary" icon="plus" onClick={() => setShowSchedule(!showSchedule)}>{showSchedule ? "Cancel" : "Schedule"}</Btn>
+        </>} />
+
+      {showSchedule && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+            <div>
+              <label className="fieldlabel">Meeting Title</label>
+              <input className="input" style={{ width: "100%" }} placeholder="e.g. Weekly Sync" value={newMeeting.title} onChange={e => setNewMeeting({...newMeeting, title: e.target.value})} />
+            </div>
+            <div>
+              <label className="fieldlabel">Room / Platform</label>
+              <select className="input" style={{ width: "100%" }} value={newMeeting.room} onChange={e => setNewMeeting({...newMeeting, room: e.target.value})}>
+                <option>Zoom</option><option>Meet</option><option>Teams</option><option>Room A</option><option>Room B</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+            <div>
+              <label className="fieldlabel">Day</label>
+              <select className="input" style={{ width: "100%" }} value={newMeeting.day} onChange={e => setNewMeeting({...newMeeting, day: e.target.value})}>
+                <option>Today</option><option>Tomorrow</option><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option>
+              </select>
+            </div>
+            <div>
+              <label className="fieldlabel">Time</label>
+              <input type="time" className="input" style={{ width: "100%" }} value={newMeeting.time} onChange={e => setNewMeeting({...newMeeting, time: e.target.value})} />
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowSchedule(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleSchedule}>Schedule Meeting</Btn>
+          </div>
+        </Card>
+      )}
+
       <div className="dash-split">
         <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
           {list.map((m, i) => (
@@ -1053,7 +1351,7 @@ export function Meetings({ role }) {
                 <div className="muted" style={{ fontSize: 14.5, marginTop:3, display:"flex", alignItems:"center", gap:6 }}><Icon name="meetings" size={14} /> {m.room} · {m.who.length} attendees</div>
               </div>
               <AvatarStack ids={m.who} size={30} max={4} />
-              <Btn variant="soft" sm icon="play">Join</Btn>
+              <Btn variant="soft" sm icon="play" onClick={() => showToast(`Joining "${m.title}"... link copied to clipboard`)}>Join</Btn>
             </div>
           ))}
         </div>
@@ -1140,7 +1438,7 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
             <div><label className="fieldlabel">Email</label><input className="input" style={{ width:"100%" }} defaultValue={currentUser.email || ""} /></div>
             <div><label className="fieldlabel">Department</label><input className="input" style={{ width:"100%" }} defaultValue={currentUser.dept || "—"} /></div>
           </div>
-          <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" }}><Btn variant="ghost">Cancel</Btn><Btn variant="primary">Save changes</Btn></div>
+          <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" }}><Btn variant="ghost">Cancel</Btn><Btn variant="primary" onClick={() => showToast("Profile updated successfully")}>Save changes</Btn></div>
         </Card>
       )}
 
@@ -1156,8 +1454,8 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
       {tab === "Security" && (
         <Card title="Security">
           <SetRow title="Two-factor authentication" sub="Add an extra layer of security to your account."><Toggle on={toggles.twofa} onClick={()=>tg("twofa")} /></SetRow>
-          <SetRow title="Active sessions" sub="Sign out of all other active sessions."><Btn variant="ghost" sm>Manage</Btn></SetRow>
-          <SetRow title="Password" sub="Last changed 3 months ago."><Btn variant="ghost" sm icon="lock">Change</Btn></SetRow>
+          <SetRow title="Active sessions" sub="Sign out of all other active sessions."><Btn variant="ghost" sm onClick={() => showToast("All other sessions have been signed out")}>Manage</Btn></SetRow>
+          <SetRow title="Password" sub="Last changed 3 months ago."><Btn variant="ghost" sm icon="lock" onClick={() => showToast("Password reset link sent to your email")}>Change</Btn></SetRow>
           <SetRow title="Login alerts" sub="Email me about logins from new devices."><Toggle on={toggles.sessions} onClick={()=>tg("sessions")} /></SetRow>
         </Card>
       )}
@@ -1165,7 +1463,7 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
       {tab === "Appearance" && (
         <Card title="Appearance">
           <SetRow title="Theme & accent color" sub="Customize colors, sidebar style and density from the live Tweaks panel."><Btn variant="soft" sm icon="sparkles" onClick={onOpenTweaks}>Open Tweaks</Btn></SetRow>
-          <SetRow title="Interface language" sub="English (United States)"><Btn variant="ghost" sm>Change</Btn></SetRow>
+          <SetRow title="Interface language" sub="English (United States)"><Btn variant="ghost" sm onClick={() => showToast("More languages coming soon")}>Change</Btn></SetRow>
           <SetRow title="Start page" sub="Page shown when you open WorkCentral."><Badge tone="gray">Dashboard</Badge></SetRow>
         </Card>
       )}
@@ -1176,7 +1474,7 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
           <SetRow title="Company ID" sub="Unique identifier for your workspace."><Badge tone="gray">{company?.companyId || "WC-2026-XXXX"}</Badge></SetRow>
           <SetRow title="Industry" sub="Your company's industry sector."><Badge tone="blue">{company?.industry || "Technology"}</Badge></SetRow>
           <SetRow title="Billing plan" sub="Business · renews Jan 2027"><Badge tone="green" dot>Active</Badge></SetRow>
-          <SetRow title="Data export" sub="Export all workspace data."><Btn variant="ghost" sm icon="download">Export</Btn></SetRow>
+          <SetRow title="Data export" sub="Export all workspace data."><Btn variant="ghost" sm icon="download" onClick={() => showToast("Export started — you'll receive an email when ready")}>Export</Btn></SetRow>
         </Card>
       )}
 
@@ -1265,7 +1563,7 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
                       <td className="t-mono" style={{ fontSize: 14.5 }}>{member.email}</td>
                       <td><Badge tone="blue">{D.ROLES.find(r => r.key === member.role)?.name}</Badge></td>
                       <td><StatusBadge value={member.status} /></td>
-                      <td style={{ textAlign:"right" }}><Btn variant="ghost" sm icon="trash" /></td>
+                      <td style={{ textAlign:"right" }}><Btn variant="ghost" sm icon="trash" onClick={() => setTeamMembers(teamMembers.filter(m2 => m2.id !== member.id))} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1283,6 +1581,7 @@ export function Schedule({ role, currentUser }) {
   const [schedule, setSchedule] = useState(D.SCHEDULE);
   const [showAdd, setShowAdd] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", type: "meeting", day: 1, start: 9, len: 1 });
+  const [weekOffset, setWeekOffset] = useState(0);
 
   const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
   const DATES = ["2","3","4","5","6"];
@@ -1318,9 +1617,11 @@ export function Schedule({ role, currentUser }) {
     <div className="page">
       <PageHead title="Schedule" sub={personal ? "Your week at a glance" : "Team schedule and meetings"}
         actions={<>
-          <Btn variant="ghost" icon="chevronLeft" />
-          <span style={{ fontSize: 15, fontWeight:600, minWidth:150, textAlign:"center" }}>Jun 2 – 6, 2026</span>
-          <Btn variant="ghost" icon="chevronRight" />
+          <Btn variant="ghost" icon="chevronLeft" onClick={() => setWeekOffset(w => w - 1)} />
+          <span style={{ fontSize: 15, fontWeight:600, minWidth:150, textAlign:"center" }}>
+            {["May 26–30","Jun 2–6","Jun 9–13","Jun 16–20","Jun 23–27"][Math.max(0, Math.min(4, weekOffset + 1))]}, 2026
+          </span>
+          <Btn variant="ghost" icon="chevronRight" onClick={() => setWeekOffset(w => w + 1)} />
           <Btn variant="primary" icon="plus" onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "Event"}</Btn>
         </>} />
 
@@ -1420,6 +1721,8 @@ export function Schedule({ role, currentUser }) {
 
 // ========== ATTENDANCE ==========
 export function Attendance({ access }) {
+  const [showMark, setShowMark] = useState(false);
+  const [marked, setMarked] = useState({});
   const statuses = ["Present","Remote","On leave","Late"];
   const rows = D.EMP.slice(0, 12).map((e, i) => {
     const st = e.status === "On leave" ? "On leave" : e.status === "Remote" ? "Remote" : (i % 7 === 0 ? "Late" : "Present");
@@ -1430,10 +1733,54 @@ export function Attendance({ access }) {
   const present = rows.filter(r => r.st === "Present").length;
   const remote = rows.filter(r => r.st === "Remote").length;
 
+  const handleExport = () => {
+    const csv = ["Employee,Department,Clock In,Hours,Status",
+      ...rows.map(r => `${r.e.name},${r.e.dept},${r.cin},${r.hrs},${r.st}`)
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "attendance.csv";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+
+  const handleSaveMark = () => {
+    const count = Object.keys(marked).length;
+    showToast(`Attendance marked for ${count} employee${count !== 1 ? "s" : ""}`);
+    setShowMark(false);
+    setMarked({});
+  };
+
   return (
     <div className="page">
       <PageHead title="Attendance" sub="Today · June 2, 2026"
-        actions={access === "full" ? <><Btn variant="ghost" icon="download">Export</Btn><Btn variant="primary" icon="check">Mark attendance</Btn></> : <Badge tone="gray" dot>Read-only</Badge>} />
+        actions={access === "full" ? <>
+          <Btn variant="ghost" icon="download" onClick={handleExport}>Export</Btn>
+          <Btn variant="primary" icon="check" onClick={() => setShowMark(!showMark)}>{showMark ? "Cancel" : "Mark attendance"}</Btn>
+        </> : <Badge tone="gray" dot>Read-only</Badge>} />
+
+      {showMark && (
+        <Card style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, marginBottom: 14 }}>Mark today's attendance</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
+            {rows.map(({ e }) => (
+              <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "var(--surface-2)", borderRadius: "var(--r-md)", border: "1px solid var(--line)" }}>
+                <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{e.name.split(" ")[0]}</div>
+                <select className="input" style={{ padding: "4px 8px", fontSize: 13, height: 30 }}
+                  value={marked[e.id] || "Present"}
+                  onChange={ev => setMarked({ ...marked, [e.id]: ev.target.value })}>
+                  {statuses.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <Btn variant="ghost" onClick={() => setShowMark(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleSaveMark}>Save attendance</Btn>
+          </div>
+        </Card>
+      )}
       <div className="grid cols-4" style={{ marginBottom:"var(--gap)" }}>
         {[["Present","green",present],["Remote","blue",remote],["On leave","amber",rows.filter(r=>r.st==="On leave").length],["Late","red",rows.filter(r=>r.st==="Late").length]].map(([l,tn,v]) => (
           <div className="stat" key={l}><div className="st-top"><div className="st-ico" style={{ background:`var(--${tn}-soft)`, color:`var(--${tn})` }}><Icon name="userCheck" size={18} /></div><div className="st-label">{l}</div></div><div className="st-val">{v}</div></div>

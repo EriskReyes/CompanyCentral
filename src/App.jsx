@@ -67,7 +67,9 @@ export default function App() {
     const stored = localStorage.getItem('company');
     return stored ? JSON.parse(stored) : null;
   });
-  const [authMode, setAuthMode] = useState("login");
+  const [authMode, setAuthMode] = useState(() =>
+    location.hash.replace("#", "") === "register" ? "register" : "login"
+  );
 
   const isAuthenticated = !!authToken && !!currentUserData && !!companyData;
   const currentUser = currentUserData || USER_BY_ROLE[role] || GUEST;
@@ -91,7 +93,16 @@ export default function App() {
   const [permissionRequest, setPermissionRequest] = useState(null);
 
   useEffect(() => {
-    const onHash = () => setRoute(location.hash.replace("#", "") || "dashboard");
+    const onHash = () => {
+      const hash = location.hash.replace("#", "");
+      if (hash === "register") {
+        setAuthMode("register");
+      } else if (hash === "login" || hash === "") {
+        setAuthMode("login");
+      } else {
+        setRoute(hash || "dashboard");
+      }
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);

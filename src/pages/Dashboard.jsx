@@ -109,7 +109,7 @@ export default function Dashboard({ role, currentUser, onNavigate }) {
         sub={isGuest ? "Here's the information shared with you." : "Here's what's happening across WorkCentral today."}
         actions={!isGuest && <>
           <Seg options={["Today","This week","This month"]} value={range} onChange={setRange} />
-          {!isEmployee && <Btn variant="primary" icon="plus">New project</Btn>}
+          {!isEmployee && <Btn variant="primary" icon="plus" onClick={() => onNavigate("projects")}>New project</Btn>}
         </>}
       />
 

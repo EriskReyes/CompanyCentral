@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 
 export function Login({ onLogin }) {
+  const [mode, setMode] = useState('email'); // 'email' | 'employee'
+
+  // Email login fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+
+  // Employee login fields
+  const [companyId, setCompanyId]       = useState('');
+  const [employeeCode, setEmployeeCode] = useState('');
+  const [empPassword, setEmpPassword]   = useState('');
+
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -12,21 +21,28 @@ export function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Invalid email or password');
+      let url, body;
+      if (mode === 'email') {
+        url  = '/api/auth/login';
+        body = JSON.stringify({ email, password });
+      } else {
+        url  = '/api/auth/employee-login';
+        body = JSON.stringify({ companyId, employeeCode, password: empPassword });
       }
 
-      const { token, user, company } = await response.json();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Login failed');
+
+      const { token, user, company } = data;
       localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('company', JSON.stringify(company));
-
       onLogin({ token, user, company });
     } catch (err) {
       setError(err.message);
@@ -140,120 +156,75 @@ export function Login({ onLogin }) {
             </div>
           )}
 
+          {/* Mode tabs */}
+          <div style={{ display: 'flex', marginBottom: '28px', background: 'var(--surface-2)', borderRadius: '8px', padding: '4px', border: '1px solid var(--line)' }}>
+            {[['email','Admin / Email'],['employee','Employee Code']].map(([m, label]) => (
+              <button key={m} type="button" onClick={() => { setMode(m); setError(''); }}
+                style={{ flex: 1, padding: '9px', border: 'none', borderRadius: '6px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', transition: 'none',
+                  background: mode === m ? 'var(--accent)' : 'transparent',
+                  color: mode === m ? '#fff' : 'var(--ink-3)',
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* Login Form */}
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {/* Email Field */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: "17px",
-                fontWeight: '600',
-                color: 'var(--ink)',
-                marginBottom: '8px'
-              }}>
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-                style={{
-                  width: '100%',
-                  padding: '11px 13px',
-                  border: '1px solid #cbd5e0',
-                  borderRadius: '6px',
-                  fontSize: "18px",
-                  fontFamily: 'inherit',
-                  background: 'var(--surface)',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: 'var(--ink)'
-                }}
-              />
-            </div>
 
-            {/* Password Field */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: "17px",
-                fontWeight: '600',
-                color: 'var(--ink)',
-                marginBottom: '8px'
-              }}>
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                style={{
-                  width: '100%',
-                  padding: '11px 13px',
-                  border: '1px solid #cbd5e0',
-                  borderRadius: '6px',
-                  fontSize: "18px",
-                  fontFamily: 'inherit',
-                  background: 'var(--surface)',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  color: 'var(--ink)'
-                }}
-              />
-            </div>
+            {mode === 'email' ? (
+              <>
+                <div>
+                  <label style={{ display:'block', fontSize:'17px', fontWeight:'600', color:'var(--ink)', marginBottom:'8px' }}>Email address</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" required
+                    style={{ width:'100%', padding:'11px 13px', border:'1px solid #cbd5e0', borderRadius:'6px', fontSize:'18px', fontFamily:'inherit', background:'var(--surface)', outline:'none', boxSizing:'border-box', color:'var(--ink)' }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:'17px', fontWeight:'600', color:'var(--ink)', marginBottom:'8px' }}>Password</label>
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" required
+                    style={{ width:'100%', padding:'11px 13px', border:'1px solid #cbd5e0', borderRadius:'6px', fontSize:'18px', fontFamily:'inherit', background:'var(--surface)', outline:'none', boxSizing:'border-box', color:'var(--ink)' }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ padding:'12px 14px', background:'var(--accent-soft)', borderRadius:'8px', fontSize:'14px', color:'var(--accent-ink)', lineHeight:1.5 }}>
+                  Ask your administrator for your <strong>Company ID</strong>, <strong>Employee Code</strong> and <strong>temporary password</strong>.
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:'17px', fontWeight:'600', color:'var(--ink)', marginBottom:'8px' }}>Company ID</label>
+                  <input value={companyId} onChange={e => setCompanyId(e.target.value)} placeholder="WC-2026-XXXX" required
+                    style={{ width:'100%', padding:'11px 13px', border:'1px solid #cbd5e0', borderRadius:'6px', fontSize:'18px', fontFamily:'monospace', background:'var(--surface)', outline:'none', boxSizing:'border-box', color:'var(--ink)', letterSpacing:'0.05em' }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:'17px', fontWeight:'600', color:'var(--ink)', marginBottom:'8px' }}>Employee Code</label>
+                  <input value={employeeCode} onChange={e => setEmployeeCode(e.target.value)} placeholder="EMP-001" required
+                    style={{ width:'100%', padding:'11px 13px', border:'1px solid #cbd5e0', borderRadius:'6px', fontSize:'18px', fontFamily:'monospace', background:'var(--surface)', outline:'none', boxSizing:'border-box', color:'var(--ink)', letterSpacing:'0.05em' }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:'17px', fontWeight:'600', color:'var(--ink)', marginBottom:'8px' }}>Password</label>
+                  <input type="password" value={empPassword} onChange={e => setEmpPassword(e.target.value)} placeholder="Enter your password" required
+                    style={{ width:'100%', padding:'11px 13px', border:'1px solid #cbd5e0', borderRadius:'6px', fontSize:'18px', fontFamily:'inherit', background:'var(--surface)', outline:'none', boxSizing:'border-box', color:'var(--ink)' }} />
+                </div>
+              </>
+            )}
 
             {/* Sign In Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                marginTop: '8px',
-                background: 'var(--accent)',
-                color: 'var(--surface)',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: "18px",
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.8 : 1,
-                transition: 'none'
-              }}
-            >
+            <button type="submit" disabled={loading}
+              style={{ width:'100%', padding:'11px 16px', marginTop:'8px', background:'var(--accent)', color:'var(--surface)', border:'none', borderRadius:'6px', fontSize:'18px', fontWeight:'600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1, transition:'none' }}>
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
-            
+
             {/* Dev Quick Login Button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                const mockUser = { id: "E-101", name: "Dana Whitfield", email: "dana@workcentral.io", role: "admin" };
-                const mockCompany = { companyId: "WC-DEV-TEST", name: "Development Inc." };
+            <button type="button"
+              onClick={() => {
+                const mockUser    = { id:'E-101', name:'Dana Whitfield', firstName:'Dana', lastName:'Whitfield', email:'dana@workcentral.io', role:'admin' };
+                const mockCompany = { companyId:'WC-DEV-TEST', name:'Development Inc.' };
                 localStorage.setItem('authToken', 'dev-mock-token');
                 localStorage.setItem('user', JSON.stringify(mockUser));
                 localStorage.setItem('company', JSON.stringify(mockCompany));
-                onLogin({ token: 'dev-mock-token', user: mockUser, company: mockCompany });
+                onLogin({ token:'dev-mock-token', user:mockUser, company:mockCompany });
               }}
-              style={{
-                width: '100%',
-                padding: '11px 16px',
-                marginTop: '8px',
-                background: 'var(--blue)',
-                color: 'var(--surface)',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: "18px",
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'none'
-              }}
-            >
+              style={{ width:'100%', padding:'11px 16px', background:'var(--surface-2)', color:'var(--ink)', border:'1px solid #cbd5e0', borderRadius:'6px', fontSize:'16px', fontWeight:'600', cursor:'pointer', transition:'none' }}>
               🛠 Dev: Quick Login (Admin)
             </button>
           </form>
