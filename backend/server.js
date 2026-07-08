@@ -28,6 +28,7 @@ app.use('/api/company', companyRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
+console.log('ENV CHECK — MONGODB_URI defined:', !!process.env.MONGODB_URI);
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
