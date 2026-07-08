@@ -1,3 +1,4 @@
+// CAMBIOS: pantalla de bienvenida para empresas reales (!isDemo), dashboard completo solo para demo
 import React, { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, Stat, Progress, StatusBadge, Avatar, AvatarStack, Btn, Badge, Seg, PageHead } from '../ui';

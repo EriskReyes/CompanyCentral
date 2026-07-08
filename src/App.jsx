@@ -1,3 +1,4 @@
+// CAMBIOS: isDemo = authToken === 'dev-mock-token' para separar datos demo de empresas reales
 import { useState, useEffect } from 'react'
 import { Sidebar, TopBar } from './layout'
 import { TweaksPanel, TweakSection, TweakColor, TweakRadio, useTweaks } from './tweaks-panel'
