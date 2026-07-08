@@ -1,3 +1,5 @@
+// CAMBIOS: todos los componentes aceptan prop isDemo — datos vacios para empresas reales, datos demo solo con token 'dev-mock-token'
+// Componentes actualizados: Documents, Files, Announcements, Clients, Invoices, Reports, Messages, Meetings, Notifications, Schedule
 import React, { useState, useRef } from 'react';
 import { Icon } from '../icons';
 import { Card, Btn, Badge, StatusBadge, Priority, Progress, Avatar, AvatarStack, Person, Search, Select, Seg, Tabs, PageHead, EmptyState, BarChart, Donut, showToast } from '../ui';

@@ -1,3 +1,4 @@
+# NUEVO ARCHIVO: Configuracion de Render para deploy del backend (gratis, sin limite de tiempo)
 services:
   - type: web
     name: companycentral-backend

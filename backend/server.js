@@ -1,3 +1,4 @@
+// CAMBIOS: CORS acepta multiples origenes (dev + Vercel), listen en 0.0.0.0 para Render
 import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
