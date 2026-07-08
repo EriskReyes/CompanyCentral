@@ -10,8 +10,12 @@ import companyRoutes from './routes/company.js';
 
 const app = express();
 
+const ALLOWED_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim());
 app.use(cors({
-  origin:      process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -27,7 +31,7 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     const PORT = process.env.PORT || 3001;
-    app.listen(PORT, () => console.log(`Backend running on http://localhost:${PORT}`));
+    app.listen(PORT, '0.0.0.0', () => console.log(`Backend running on port ${PORT}`));
     console.log('MongoDB connected');
   })
   .catch(err => {
