@@ -4,8 +4,8 @@ import { Card, Btn, Badge, StatusBadge, Priority, Progress, Avatar, AvatarStack,
 import * as D from '../data';
 
 // ========== PROJECTS ==========
-export function Projects({ access }) {
-  const [projects, setProjects] = useState(D.PROJ);
+export function Projects({ access, isDemo }) {
+  const [projects, setProjects] = useState(isDemo ? D.PROJ : []);
   const [view, setView] = useState("List");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("All");
@@ -143,8 +143,8 @@ export function Projects({ access }) {
 }
 
 // ========== TASKS ==========
-export function Tasks({ access, role, currentUser }) {
-  const [tasks, setTasks] = useState(D.TASKS);
+export function Tasks({ access, role, currentUser, isDemo }) {
+  const [tasks, setTasks] = useState(isDemo ? D.TASKS : []);
   const [view, setView] = useState("Board");
   const [proj, setProj] = useState("All projects");
   const [showAdd, setShowAdd] = useState(false);
@@ -292,8 +292,17 @@ const EMPTY_EMP = {
   notes:"",
 };
 
-export function Employees({ company }) {
-  const [employees, setEmployees] = useState(D.EMP);
+export function Employees({ company, isDemo }) {
+  const [employees, setEmployees] = useState([]);
+
+  React.useEffect(() => {
+    if (isDemo) { setEmployees(D.EMP); return; }
+    const token = localStorage.getItem('authToken');
+    fetch('/api/team/members', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setEmployees(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [isDemo]);
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("All");
   const [showAdd, setShowAdd] = useState(false);
@@ -554,8 +563,8 @@ export function Employees({ company }) {
 }
 
 // ========== DEPARTMENTS ==========
-export function Departments() {
-  const [departments, setDepartments] = useState(D.DEPT);
+export function Departments({ isDemo }) {
+  const [departments, setDepartments] = useState(isDemo ? D.DEPT : []);
   const [showAdd, setShowAdd] = useState(false);
   const [newDept, setNewDept] = useState({ name: "", lead: "E-101", count: 0, open: 0, color: "#2f6fdb" });
 
@@ -636,8 +645,8 @@ export function Departments() {
 }
 
 // ========== TEAMS ==========
-export function Teams() {
-  const [teams, setTeams] = useState(D.TEAMS);
+export function Teams({ isDemo }) {
+  const [teams, setTeams] = useState(isDemo ? D.TEAMS : []);
   const [showAdd, setShowAdd] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: "", dept: "Engineering", focus: "", lead: "E-101" });
 
@@ -702,9 +711,10 @@ export function Teams() {
 }
 
 // ========== DOCUMENTS ==========
-export function Documents() {
+export function Documents({ isDemo }) {
   const [q, setQ] = useState("");
-  const list = D.DOCS.filter(d => q === "" || d.name.toLowerCase().includes(q.toLowerCase()));
+  const docs = isDemo ? D.DOCS : [];
+  const list = docs.filter(d => q === "" || d.name.toLowerCase().includes(q.toLowerCase()));
   const uploadRef = useRef(null);
 
   const handleDownload = (doc) => {
@@ -734,7 +744,7 @@ export function Documents() {
 
   return (
     <div className="page">
-      <PageHead title="Documents" sub={`${D.DOCS.length} documents`}
+      <PageHead title="Documents" sub={`${docs.length} documents`}
         actions={<>
           <input type="file" multiple ref={uploadRef} style={{ display: "none" }} onChange={handleUpload} />
           <Btn variant="primary" icon="plus" onClick={() => uploadRef.current?.click()}>Upload</Btn>
@@ -745,7 +755,13 @@ export function Documents() {
         <span className="muted" style={{ fontSize: 14.5 }}>{list.length} documents</span>
       </div>
       <Card flush>
-        {list.map(d => {
+        {list.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"36px 0", color:"var(--muted)" }}>
+            <div style={{ fontSize:28, marginBottom:10 }}>📄</div>
+            <div style={{ fontSize:15, fontWeight:600, color:"var(--ink-2)", marginBottom:6 }}>No documents yet</div>
+            <div style={{ fontSize:14 }}>Upload your first document to get started.</div>
+          </div>
+        ) : list.map(d => {
           const [bg, fg] = D.DOC_COLORS[d.kind] || ["#eef1f4","#475569"];
           return (<div key={d.id} className="lrow" style={{ display:"flex", alignItems:"center" }}>
             <div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize: 12, fontWeight:700 }}>{d.kind}</div>
@@ -767,7 +783,7 @@ export function Documents() {
 }
 
 // ========== FILES ==========
-export function Files({ access }) {
+export function Files({ access, isDemo }) {
   const [folders, setFolders] = useState([
     { name:"Engineering", count:48, color:"#2f6fdb" }, { name:"Design Assets", count:126, color:"#0d7d7d" },
     { name:"Product Specs", count:31, color:"#6d54d6" }, { name:"People & HR", count:22, color:"#15935f" },
@@ -841,10 +857,11 @@ export function Files({ access }) {
         <table className="table">
           <thead><tr><th>Name</th><th>Owner</th><th>Modified</th><th>Size</th><th style={{ textAlign:"right" }}>Actions</th></tr></thead>
           <tbody>
-            {D.DOCS.slice(0,6).map(d => {
+            {(isDemo ? D.DOCS.slice(0,6) : []).map(d => {
               const [bg, fg] = D.DOC_COLORS[d.kind] || ["#eef1f4","#475569"];
               return <tr key={d.id} className="clickable"><td><div style={{ display:"flex", alignItems:"center", gap:11 }}><div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize: 11, fontWeight:700, width:30, height:30 }}>{d.kind}</div><span className="t-strong">{d.name}</span></div></td><td>{D.empById[d.owner]?.name.split(" ")[0]}</td><td className="t-mono" style={{ fontSize: 14.5 }}>{d.updated}</td><td className="t-mono" style={{ fontSize: 14.5 }}>{d.size}</td><td style={{ textAlign:"right" }}><div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}><Btn variant="ghost" sm icon="eye" onClick={(e) => { e.stopPropagation(); handleView(d); }} /><Btn variant="ghost" sm icon="download" onClick={(e) => { e.stopPropagation(); handleDownload(d); }} /></div></td></tr>;
             })}
+            {!isDemo && <tr><td colSpan={5} style={{ textAlign:"center", padding:"24px 0", color:"var(--muted)" }}>No files yet. Upload your first file.</td></tr>}
           </tbody>
         </table>
       </Card>
@@ -853,8 +870,8 @@ export function Files({ access }) {
 }
 
 // ========== ANNOUNCEMENTS ==========
-export function Announcements() {
-  const [announcements, setAnnouncements] = useState(D.ANNOUNCE);
+export function Announcements({ isDemo }) {
+  const [announcements, setAnnouncements] = useState(isDemo ? D.ANNOUNCE : []);
   const [showAdd, setShowAdd] = useState(false);
   const [newAnn, setNewAnn] = useState({ title: "", body: "", dept: "Engineering", pinned: false });
 
@@ -924,8 +941,8 @@ export function Announcements() {
 }
 
 // ========== CLIENTS ==========
-export function Clients() {
-  const [clients, setClients] = useState(D.CLIENTS);
+export function Clients({ isDemo }) {
+  const [clients, setClients] = useState(isDemo ? D.CLIENTS : []);
   const [showAdd, setShowAdd] = useState(false);
   const [newClient, setNewClient] = useState({ name: "", industry: "Technology", contact: "", health: "New", status: "Prospect", mrr: "$0" });
 
@@ -1005,6 +1022,7 @@ export function Clients() {
         <table className="table">
           <thead><tr><th>Client</th><th>Industry</th><th>Contact</th><th>Projects</th><th>Health</th><th>MRR</th><th>Status</th></tr></thead>
           <tbody>
+            {clients.length === 0 && <tr><td colSpan={7} style={{ textAlign:"center", padding:"24px 0", color:"var(--muted)" }}>No clients yet. Add your first client above.</td></tr>}
             {clients.map(c => (<tr key={c.id}>
               <td><div className="t-strong">{c.name}</div><div className="muted" style={{ fontSize: 13.5 }}>{c.id}</div></td>
               <td>{c.industry}</td>
@@ -1022,10 +1040,10 @@ export function Clients() {
 }
 
 // ========== INVOICES ==========
-export function Invoices() {
-  const [invoices, setInvoices] = useState(D.INVOICES);
+export function Invoices({ isDemo }) {
+  const [invoices, setInvoices] = useState(isDemo ? D.INVOICES : []);
   const [showAdd, setShowAdd] = useState(false);
-  const [newInvoice, setNewInvoice] = useState({ client: D.CLIENTS[0]?.name || "", amount: "$0", due: "TBD", status: "Draft" });
+  const [newInvoice, setNewInvoice] = useState({ client: "", amount: "$0", due: "TBD", status: "Draft" });
 
   const handleAddInvoice = () => {
     if (!newInvoice.client || newInvoice.amount === "$0") return;
@@ -1038,7 +1056,7 @@ export function Invoices() {
       status: newInvoice.status
     };
     setInvoices([inv, ...invoices]);
-    setNewInvoice({ client: D.CLIENTS[0]?.name || "", amount: "$0", due: "TBD", status: "Draft" });
+    setNewInvoice({ client: "", amount: "$0", due: "TBD", status: "Draft" });
     setShowAdd(false);
     showToast(`Invoice "${inv.id}" created successfully`);
   };
@@ -1053,9 +1071,13 @@ export function Invoices() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
             <div>
               <label className="fieldlabel">Client</label>
-              <select className="input" style={{ width: "100%" }} value={newInvoice.client} onChange={e => setNewInvoice({...newInvoice, client: e.target.value})}>
-                {D.CLIENTS.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
+              {isDemo ? (
+                <select className="input" style={{ width: "100%" }} value={newInvoice.client} onChange={e => setNewInvoice({...newInvoice, client: e.target.value})}>
+                  {D.CLIENTS.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+              ) : (
+                <input className="input" style={{ width: "100%" }} placeholder="Client name" value={newInvoice.client} onChange={e => setNewInvoice({...newInvoice, client: e.target.value})} />
+              )}
             </div>
             <div>
               <label className="fieldlabel">Amount</label>
@@ -1087,6 +1109,7 @@ export function Invoices() {
         <table className="table">
           <thead><tr><th>Invoice</th><th>Client</th><th>Amount</th><th>Issued</th><th>Due</th><th>Status</th></tr></thead>
           <tbody>
+            {invoices.length === 0 && <tr><td colSpan={6} style={{ textAlign:"center", padding:"24px 0", color:"var(--muted)" }}>No invoices yet. Create your first invoice above.</td></tr>}
             {invoices.map(i => (<tr key={i.id}>
               <td><div className="mono t-strong">{i.id}</div></td>
               <td>{i.client}</td>
@@ -1103,7 +1126,7 @@ export function Invoices() {
 }
 
 // ========== REPORTS ==========
-export function Reports() {
+export function Reports({ isDemo }) {
   const handleExport = () => {
     const csv = ["Metric,Value",
       "Total tasks done,124","Tasks in progress,48","Tasks in review,21",
@@ -1120,28 +1143,39 @@ export function Reports() {
 
   return (
     <div className="page">
-      <PageHead title="Reports" actions={<Btn variant="ghost" icon="download" onClick={handleExport}>Export CSV</Btn>} />
-      <div className="grid cols-2" style={{ marginBottom:"var(--gap)" }}>
-        <Card title="Task Status" sub="Current distribution">
-          <Donut data={D.REPORTS.taskStatus} size={160} center={D.REPORTS.taskStatus.reduce((s,d)=>s+d.val,0)} />
+      <PageHead title="Reports" actions={isDemo && <Btn variant="ghost" icon="download" onClick={handleExport}>Export CSV</Btn>} />
+      {isDemo ? (
+        <div className="grid cols-2" style={{ marginBottom:"var(--gap)" }}>
+          <Card title="Task Status" sub="Current distribution">
+            <Donut data={D.REPORTS.taskStatus} size={160} center={D.REPORTS.taskStatus.reduce((s,d)=>s+d.val,0)} />
+          </Card>
+          <Card title="Weekly Activity" sub="Last 7 days">
+            <BarChart data={D.REPORTS.weekly} />
+          </Card>
+        </div>
+      ) : (
+        <Card>
+          <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>📊</div>
+            <div style={{ fontSize:17, fontWeight:600, marginBottom:8, color:"var(--ink-2)" }}>No data yet</div>
+            <div style={{ fontSize:15 }}>Reports will appear once your team starts logging tasks, projects, and activities.</div>
+          </div>
         </Card>
-        <Card title="Weekly Activity" sub="Last 7 days">
-          <BarChart data={D.REPORTS.weekly} />
-        </Card>
-      </div>
+      )}
     </div>
   );
 }
 
 // ========== MESSAGES ==========
-export function Messages({ currentUser }) {
-  const [sel, setSel] = useState(D.THREADS[0].id);
+export function Messages({ currentUser, isDemo }) {
+  const threads = isDemo ? D.THREADS : [];
+  const [sel, setSel] = useState(threads[0]?.id || null);
   const [draft, setDraft] = useState("");
   const [showStickers, setShowStickers] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const fileRef = useRef(null);
 
-  const t = D.THREADS.find(x => x.id === sel);
+  const t = threads.find(x => x.id === sel);
 
   const handleSend = () => {
     if (!draft.trim() && attachments.length === 0) return;
@@ -1160,6 +1194,21 @@ export function Messages({ currentUser }) {
     setAttachments(prev => prev.filter((_, i) => i !== idx));
   };
 
+  if (!isDemo) {
+    return (
+      <div className="page">
+        <PageHead title="Messages" />
+        <Card>
+          <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>💬</div>
+            <div style={{ fontSize:17, fontWeight:600, marginBottom:8, color:"var(--ink-2)" }}>No messages yet</div>
+            <div style={{ fontSize:15 }}>Messages will appear here once your team members are added.</div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "calc(100vh - 62px)", overflow: "hidden" }}>
       <div style={{ display:"grid", gridTemplateColumns:"320px 1fr", flex:1, overflow:"hidden", background: "var(--surface)" }}>
@@ -1167,7 +1216,7 @@ export function Messages({ currentUser }) {
         <div style={{ borderRight:"1px solid var(--line)", display:"flex", flexDirection:"column", minHeight:0, background: "var(--surface-2)" }}>
           <div style={{ padding:"16px 14px", borderBottom:"1px solid var(--line-2)", background:"var(--surface)" }}><Search placeholder="Search messages…" style={{ minWidth:0, width:"100%" }} /></div>
           <div style={{ overflowY:"auto", flex:1 }}>
-            {D.THREADS.map(th => {
+            {threads.map(th => {
               const e = D.empById[th.id];
               return (
                 <div key={th.id} onClick={() => setSel(th.id)} style={{ display:"flex", gap:11, padding:"12px 14px", cursor:"pointer", borderBottom:"1px solid var(--line-2)", background: sel===th.id ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "transparent" }}>
@@ -1284,9 +1333,10 @@ function MiniCalendar() {
   );
 }
 
-export function Meetings({ role, onNavigate }) {
+export function Meetings({ role, onNavigate, isDemo }) {
   const guest = role === "guest";
-  const list = guest ? D.MEETINGS.slice(0,1) : D.MEETINGS;
+  const allMeetings = isDemo ? D.MEETINGS : [];
+  const list = guest ? allMeetings.slice(0,1) : allMeetings;
   const [showSchedule, setShowSchedule] = useState(false);
   const [newMeeting, setNewMeeting] = useState({ title: "", room: "Zoom", day: "Today", time: "09:00" });
 
@@ -1340,6 +1390,13 @@ export function Meetings({ role, onNavigate }) {
 
       <div className="dash-split">
         <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+          {list.length === 0 && (
+            <div className="card" style={{ padding:"36px 24px", textAlign:"center", color:"var(--muted)" }}>
+              <div style={{ fontSize:28, marginBottom:10 }}>📅</div>
+              <div style={{ fontSize:15, fontWeight:600, color:"var(--ink-2)", marginBottom:6 }}>No meetings scheduled</div>
+              <div style={{ fontSize:14 }}>Use the Schedule button to set up your first meeting.</div>
+            </div>
+          )}
           {list.map((m, i) => (
             <div className="card" key={i} style={{ padding:"var(--pad-card)", display:"flex", gap:16, alignItems:"center" }}>
               <div style={{ textAlign:"center", minWidth:62, padding:"10px 8px", background:"var(--accent-soft)", borderRadius:10 }}>
@@ -1366,12 +1423,19 @@ export function Meetings({ role, onNavigate }) {
 }
 
 // ========== NOTIFICATIONS ==========
-export function Notifications() {
+export function Notifications({ isDemo }) {
+  const notifs = isDemo ? D.NOTIFS : [];
   return (
     <div className="page">
       <PageHead title="Notifications" />
       <Card flush>
-        {D.NOTIFS.map((n, i) => (<div key={i} className="lrow">
+        {notifs.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"36px 0", color:"var(--muted)" }}>
+            <div style={{ fontSize:28, marginBottom:10 }}>🔔</div>
+            <div style={{ fontSize:15, fontWeight:600, color:"var(--ink-2)", marginBottom:6 }}>No notifications</div>
+            <div style={{ fontSize:14 }}>You're all caught up!</div>
+          </div>
+        ) : notifs.map((n, i) => (<div key={i} className="lrow">
           <Avatar id={n.who} size={32} />
           <div className="lr-main">
             <div className="lr-title">{D.empById[n.who]?.name}</div>
@@ -1577,8 +1641,8 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
 }
 
 // ========== SCHEDULE (stub) ==========
-export function Schedule({ role, currentUser }) {
-  const [schedule, setSchedule] = useState(D.SCHEDULE);
+export function Schedule({ role, currentUser, isDemo }) {
+  const [schedule, setSchedule] = useState(isDemo ? D.SCHEDULE : []);
   const [showAdd, setShowAdd] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", type: "meeting", day: 1, start: 9, len: 1 });
   const [weekOffset, setWeekOffset] = useState(0);

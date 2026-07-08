@@ -76,12 +76,59 @@ function ActivityFeed() {
   );
 }
 
-export default function Dashboard({ role, currentUser, onNavigate }) {
+export default function Dashboard({ role, currentUser, onNavigate, isDemo, company }) {
   const [range, setRange] = useState("This week");
-  const ongoing = D.PROJ.filter(p => p.status !== "Completed");
+  const ongoing = isDemo ? D.PROJ.filter(p => p.status !== "Completed") : [];
   const isEmployee = role === "employee";
   const isGuest = role === "guest";
-  const first = currentUser.name.split(" ")[0];
+  const first = (currentUser.firstName || currentUser.name || "there").split(" ")[0];
+
+  if (!isDemo) {
+    return (
+      <div className="page">
+        <PageHead
+          title={`Welcome, ${first}!`}
+          sub={`${company?.name || "Your workspace"} is ready. Start building your team.`}
+        />
+        <div className="grid cols-3" style={{ marginBottom:"var(--gap)" }}>
+          {[
+            { icon:"employees", label:"Add employees",    sub:"Invite your team members and assign roles",   page:"employees",   color:"#0d7d7d" },
+            { icon:"projects",  label:"Create a project", sub:"Organize work and track progress",             page:"projects",    color:"#2f6fdb" },
+            { icon:"departments",label:"Set up departments",sub:"Structure your company's teams",            page:"departments", color:"#6d54d6" },
+          ].map(({ icon, label, sub, page, color }) => (
+            <div key={page} className="card" style={{ padding:28, cursor:"pointer", display:"flex", flexDirection:"column", gap:14 }} onClick={() => onNavigate(page)}>
+              <div style={{ width:48, height:48, borderRadius:"var(--r-lg)", background:color+"22", display:"grid", placeItems:"center" }}>
+                <Icon name={icon} size={24} style={{ color }} />
+              </div>
+              <div>
+                <div style={{ fontSize:17, fontWeight:700, marginBottom:4 }}>{label}</div>
+                <div className="muted" style={{ fontSize:14.5, lineHeight:1.5 }}>{sub}</div>
+              </div>
+              <div style={{ color, fontWeight:600, fontSize:14.5, marginTop:"auto" }}>Get started →</div>
+            </div>
+          ))}
+        </div>
+        <div className="grid cols-2">
+          {[
+            { icon:"tasks",     label:"Tasks & projects",  sub:"Create your first task and assign it to a team member.", page:"tasks",    color:"#c2790a" },
+            { icon:"clients",   label:"Add clients",       sub:"Track your clients and associated projects.",             page:"clients",  color:"#15935f" },
+            { icon:"announcements",label:"Announcements",  sub:"Post your first company-wide announcement.",              page:"announcements", color:"#d4453e" },
+            { icon:"settings",  label:"Workspace settings",sub:"Configure your company ID, plan and preferences.",        page:"settings", color:"#4f6d8e" },
+          ].map(({ icon, label, sub, page, color }) => (
+            <div key={page} className="card" style={{ padding:20, cursor:"pointer", display:"flex", gap:14, alignItems:"flex-start" }} onClick={() => onNavigate(page)}>
+              <div style={{ width:38, height:38, borderRadius:"var(--r-md)", background:color+"22", display:"grid", placeItems:"center", flexShrink:0 }}>
+                <Icon name={icon} size={20} style={{ color }} />
+              </div>
+              <div>
+                <div style={{ fontSize:15.5, fontWeight:600, marginBottom:3 }}>{label}</div>
+                <div className="muted" style={{ fontSize:14, lineHeight:1.5 }}>{sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const myTasks = D.TASKS.filter(t => t.assignee === currentUser.id && t.status !== "Done");
   const myProjects = D.PROJ.filter(p => p.members.includes(currentUser.id));

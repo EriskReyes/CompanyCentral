@@ -154,6 +154,7 @@ export default function App() {
     setTimeout(() => setPermissionRequest(null), 4000);
   };
 
+  const isDemo = authToken === 'dev-mock-token';
   const access = getAccess(role, route);
   const Page = PAGES[route] || Pages.Dashboard;
 
@@ -190,6 +191,7 @@ export default function App() {
                 currentUser={currentUser}
                 company={companyData}
                 onNavigate={navigate}
+                isDemo={isDemo}
                 onOpenTweaks={() => document.querySelector(".tweaks-panel")?.classList.toggle("open")}
               />}
           {permissionRequest && (
