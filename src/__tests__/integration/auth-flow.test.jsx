@@ -51,7 +51,7 @@ describe('Auth Flow — Email Login', () => {
     });
   });
 
-  it('shows Dashboard after successful email login', async () => {
+  it('shows Dashboard sidebar after successful email login', async () => {
     mockFetchOk({ token: 'tok', user: MOCK_USER, company: MOCK_COMPANY });
     render(<App />);
 
@@ -60,7 +60,8 @@ describe('Auth Flow — Email Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('WorkCentral')).toBeInTheDocument();
+      // Brand name renders as Work<b>Central</b> — use .brand-name class
+      expect(document.querySelector('.brand-name')).toBeInTheDocument();
     });
     expect(screen.getByText('WC-TEST-001')).toBeInTheDocument();
   });
@@ -140,12 +141,12 @@ describe('Auth Flow — Employee Login', () => {
 });
 
 describe('Auth Flow — Dev Quick Login', () => {
-  it('logs in instantly without API call and shows Dashboard', async () => {
+  it('logs in instantly without API call and shows sidebar', async () => {
     render(<App />);
     await userEvent.click(screen.getByRole('button', { name: /dev.*quick login/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('WorkCentral')).toBeInTheDocument();
+      expect(document.querySelector('.brand-name')).toBeInTheDocument();
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -158,7 +159,7 @@ describe('Auth Flow — Logout', () => {
     localStorage.setItem('company', JSON.stringify(MOCK_COMPANY));
 
     render(<App />);
-    expect(screen.getByText('WorkCentral')).toBeInTheDocument();
+    expect(document.querySelector('.brand-name')).toBeInTheDocument();
 
     await userEvent.click(screen.getByText('Dana Whitfield'));
     await userEvent.click(screen.getByText('Sign out'));

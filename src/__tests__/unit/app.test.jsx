@@ -5,13 +5,21 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 
 function setupAuth(role = 'admin') {
-  localStorage.setItem('authToken', 'test-token');
+  // dev-mock-token makes isDemo=true so pages use static data instead of calling fetch
+  localStorage.setItem('authToken', 'dev-mock-token');
   localStorage.setItem('user', JSON.stringify({
     id: 'E-101', name: 'Dana Whitfield', role, email: 'dana@test.io',
   }));
   localStorage.setItem('company', JSON.stringify({
     companyId: 'WC-TEST', name: 'Test Corp', industry: 'Technology',
   }));
+}
+
+// Switch role-switcher in TopBar to a role by display name (e.g. 'Employee', 'Guest')
+async function switchRoleTo(roleName) {
+  await userEvent.click(document.querySelector('.role-switch'));
+  const options = screen.getAllByText(roleName);
+  await userEvent.click(options[options.length - 1]);
 }
 
 // ─── Unauthenticated state ────────────────────────────────────────────────────
@@ -32,16 +40,22 @@ describe('App (unauthenticated)', () => {
 describe('App (authenticated)', () => {
   beforeEach(() => {
     setupAuth('admin');
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
   });
 
   it('renders Sidebar when authenticated', () => {
     render(<App />);
-    expect(screen.getByText('WorkCentral')).toBeInTheDocument();
+    // Brand name renders as Work<b>Central</b> — use .brand-name class
+    expect(document.querySelector('.brand-name')).toBeInTheDocument();
+    expect(document.querySelector('.brand-name').textContent).toBe('WorkCentral');
   });
 
   it('renders TopBar with Dashboard title by default', () => {
-    render(<App />);
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    const { container } = render(<App />);
+    // 'Dashboard' appears in both topbar title and nav item — query the specific element
+    const tbTitle = container.querySelector('.tb-title');
+    expect(tbTitle).toBeInTheDocument();
+    expect(tbTitle.textContent).toBe('Dashboard');
   });
 
   it('renders company name in topbar crumb', () => {
@@ -90,19 +104,16 @@ describe('App (authenticated)', () => {
   });
 
   it('navigate function closes mobile sidebar after navigation', async () => {
-    render(<App />);
-    // Simulate opening mobile sidebar then navigating
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true });
+    render(<App />);
     await userEvent.click(screen.getByTitle('Toggle sidebar'));
     // sidebar should be open
-    const sidebar = document.querySelector('.sidebar');
-    expect(sidebar).toHaveClass('mobile-open');
+    expect(document.querySelector('.sidebar')).toHaveClass('mobile-open');
 
     // Navigate
-    await userEvent.click(screen.getByText('Employees'));
+    await userEvent.click(screen.getByText('Tasks'));
     await waitFor(() => {
-      const updatedSidebar = document.querySelector('.sidebar');
-      expect(updatedSidebar).not.toHaveClass('mobile-open');
+      expect(document.querySelector('.sidebar')).not.toHaveClass('mobile-open');
     });
     Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
   });
@@ -110,24 +121,36 @@ describe('App (authenticated)', () => {
 
 // ─── Role-based rendering ─────────────────────────────────────────────────────
 describe('App role-based behavior', () => {
-  it('employee sees LockedPage when accessing invoices', async () => {
-    setupAuth('employee');
+  beforeEach(() => {
+    setupAuth('admin');
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+  });
+
+  it('role-switcher "Employee" shows LockedPage for invoices', async () => {
     render(<App />);
-    // Navigate directly by changing hash
+    await switchRoleTo('Employee');
     window.location.hash = 'invoices';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
-
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
     });
   });
 
-  it('admin does NOT see LockedPage for invoices', async () => {
-    setupAuth('admin');
+  it('admin (default role-switcher) does NOT see LockedPage for invoices', async () => {
     render(<App />);
     await userEvent.click(screen.getByText('Invoices'));
     await waitFor(() => {
       expect(screen.queryByText('Permission Required')).toBeNull();
+    });
+  });
+
+  it('role-switcher "Guest" shows LockedPage for employees', async () => {
+    render(<App />);
+    await switchRoleTo('Guest');
+    window.location.hash = 'employees';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await waitFor(() => {
+      expect(screen.getByText('Permission Required')).toBeInTheDocument();
     });
   });
 });

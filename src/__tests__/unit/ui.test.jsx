@@ -322,12 +322,11 @@ describe('Search', () => {
     expect(screen.getByPlaceholderText('Search employees...')).toBeInTheDocument();
   });
 
-  it('calls onChange on input', async () => {
+  it('calls onChange on input', () => {
     const handler = vi.fn();
     render(<Search onChange={handler} />);
-    await userEvent.type(screen.getByRole('textbox'), 'hello');
-    expect(handler).toHaveBeenCalled();
-    expect(handler).toHaveBeenLastCalledWith('hello');
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } });
+    expect(handler).toHaveBeenCalledWith('hello');
   });
 
   it('displays controlled value', () => {

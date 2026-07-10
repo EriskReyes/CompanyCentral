@@ -46,8 +46,10 @@ function renderTopBar(props = {}) {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 describe('Sidebar', () => {
   it('renders the WorkCentral brand name', () => {
-    renderSidebar();
-    expect(screen.getByText('WorkCentral')).toBeInTheDocument();
+    const { container } = renderSidebar();
+    const brand = container.querySelector('.brand-name');
+    expect(brand).toBeInTheDocument();
+    expect(brand.textContent).toBe('WorkCentral');
   });
 
   it('renders company name', () => {
@@ -145,8 +147,8 @@ describe('Sidebar', () => {
 
   it('clicking brand navigates to dashboard', async () => {
     const onNavigate = vi.fn();
-    renderSidebar({ onNavigate });
-    await userEvent.click(screen.getByText('WorkCentral'));
+    const { container } = renderSidebar({ onNavigate });
+    await userEvent.click(container.querySelector('.side-brand'));
     expect(onNavigate).toHaveBeenCalledWith('dashboard');
   });
 });

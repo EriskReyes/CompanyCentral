@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Login, Register } from '../../pages/Auth';
 
@@ -171,7 +171,8 @@ describe('Register', () => {
 
   it('shows error when required step 1 fields are missing', async () => {
     render(<Register onRegister={mockOnRegister} />);
-    await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    // Use fireEvent.submit to bypass HTML5 constraint validation in jsdom
+    fireEvent.submit(document.querySelector('form'));
     await waitFor(() => {
       expect(screen.getByText('Please fill in all fields')).toBeInTheDocument();
     });
@@ -197,13 +198,11 @@ describe('Register', () => {
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => screen.getByText('Step 2 of 2'));
 
-    // Step 2
+    // Step 2 — use exact placeholder text for both password fields
     await userEvent.type(screen.getByPlaceholderText('Jane Doe'), 'Jane Doe');
     await userEvent.type(screen.getByPlaceholderText('you@company.com'), 'jane@co.com');
-
-    const passwords = screen.getAllByPlaceholderText(/password/i);
-    await userEvent.type(passwords[0], 'pass123');
-    await userEvent.type(passwords[1], 'different');
+    await userEvent.type(screen.getByPlaceholderText('At least 6 characters'), 'pass123');
+    await userEvent.type(screen.getByPlaceholderText('Confirm your password'), 'different');
     await userEvent.click(screen.getByRole('button', { name: /create workspace/i }));
 
     await waitFor(() => {
@@ -226,12 +225,11 @@ describe('Register', () => {
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await waitFor(() => screen.getByText('Step 2 of 2'));
 
-    // Step 2
+    // Step 2 — use exact placeholder text for both password fields
     await userEvent.type(screen.getByPlaceholderText('Jane Doe'), 'Jane Doe');
     await userEvent.type(screen.getByPlaceholderText('you@company.com'), 'jane@co.com');
-    const passwords = screen.getAllByPlaceholderText(/password/i);
-    await userEvent.type(passwords[0], 'pass1234');
-    await userEvent.type(passwords[1], 'pass1234');
+    await userEvent.type(screen.getByPlaceholderText('At least 6 characters'), 'pass1234');
+    await userEvent.type(screen.getByPlaceholderText('Confirm your password'), 'pass1234');
     await userEvent.click(screen.getByRole('button', { name: /create workspace/i }));
 
     await waitFor(() => {

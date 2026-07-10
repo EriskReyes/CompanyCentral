@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 
 function setupAuth(role = 'admin') {
-  localStorage.setItem('authToken', 'test-token');
+  // dev-mock-token makes isDemo=true so pages use static data instead of calling fetch
+  localStorage.setItem('authToken', 'dev-mock-token');
   localStorage.setItem('user', JSON.stringify({
     id: 'E-101', name: 'Dana Whitfield', role, email: 'dana@test.io',
   }));
@@ -86,7 +87,8 @@ describe('Sidebar Navigation', () => {
     render(<App />);
     await userEvent.click(screen.getByText('Employees'));
     await waitFor(() => screen.getAllByText('Employees'));
-    await userEvent.click(screen.getByText('WorkCentral').closest('.side-brand'));
+    // Brand name renders as Work<b>Central</b> — click the .side-brand container directly
+    await userEvent.click(document.querySelector('.side-brand'));
     await waitFor(() => {
       const dashItem = screen.getAllByText('Dashboard')[0].closest('.nav-item');
       expect(dashItem).toHaveClass('active');

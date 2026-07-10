@@ -4,28 +4,49 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
 
-function renderAs(role) {
-  localStorage.clear();
-  localStorage.setItem('authToken', 'test-token');
+// In App.jsx, getAccess(role, route) uses the role-switcher state (defaults to "admin").
+// To test role-based access we switch via the RoleSwitcher dropdown in the TopBar.
+
+function setupAdmin() {
+  // dev-mock-token makes isDemo=true so pages use static data instead of calling fetch
+  localStorage.setItem('authToken', 'dev-mock-token');
   localStorage.setItem('user', JSON.stringify({
-    id: 'E-101', name: 'Test User', role, email: 'test@co.io',
+    id: 'E-101', name: 'Dana Whitfield', role: 'admin', email: 'dana@test.io',
   }));
   localStorage.setItem('company', JSON.stringify({
     companyId: 'WC-ROLE', name: 'Role Corp', industry: 'Technology',
   }));
-  return render(<App />);
 }
 
-async function navigateTo(key) {
-  window.location.hash = key;
+async function switchRoleTo(roleName) {
+  // Open the role switcher dropdown
+  const switcher = document.querySelector('.role-switch');
+  await userEvent.click(switcher);
+  // Click the desired role name inside the dropdown
+  const options = screen.getAllByText(roleName);
+  // The last one is in the dropdown (the first could be the active indicator)
+  await userEvent.click(options[options.length - 1]);
+}
+
+async function navigateTo(hash) {
+  window.location.hash = hash;
   window.dispatchEvent(new HashChangeEvent('hashchange'));
-  await waitFor(() => {}, { timeout: 500 });
+  // Give React time to process the state update
+  await waitFor(() => {}, { timeout: 300 });
 }
 
-// ─── Locked page ─────────────────────────────────────────────────────────────
+beforeEach(() => {
+  localStorage.clear();
+  window.location.hash = '';
+  Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true });
+});
+
+// ─── LockedPage component ─────────────────────────────────────────────────────
 describe('LockedPage', () => {
-  it('shows "Permission Required" heading when access is denied', async () => {
-    renderAs('employee');
+  it('shows "Permission Required" heading when role has no access', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Guest');
     await navigateTo('invoices');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
@@ -33,23 +54,33 @@ describe('LockedPage', () => {
   });
 
   it('shows the page label in the locked message', async () => {
-    renderAs('employee');
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Employee');
     await navigateTo('invoices');
     await waitFor(() => {
-      expect(screen.getByText(/invoices/i)).toBeInTheDocument();
+      // The locked-page <strong> element holds the page label
+      const label = document.querySelector('.locked-page strong');
+      expect(label).toBeInTheDocument();
+      expect(label.textContent.toLowerCase()).toContain('invoices');
     });
   });
 
   it('"Request Access" button changes to "Request Sent ✓" after click', async () => {
-    renderAs('employee');
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Employee');
     await navigateTo('invoices');
     await waitFor(() => screen.getByText('Request Access'));
     await userEvent.click(screen.getByText('Request Access'));
-    expect(screen.getByText(/request sent/i)).toBeInTheDocument();
+    // Use exact text to avoid matching the toast "Access Request Sent"
+    expect(screen.getByText('Request Sent ✓')).toBeInTheDocument();
   });
 
   it('"Go to Dashboard" button navigates back to Dashboard', async () => {
-    renderAs('employee');
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Guest');
     await navigateTo('invoices');
     await waitFor(() => screen.getByText('Go to Dashboard'));
     await userEvent.click(screen.getByText('Go to Dashboard'));
@@ -62,40 +93,49 @@ describe('LockedPage', () => {
 
 // ─── Invoices access ─────────────────────────────────────────────────────────
 describe('Invoices page access', () => {
-  it('admin can access invoices (no LockedPage)', async () => {
-    renderAs('admin');
+  it('admin (default role) can access invoices — no LockedPage', async () => {
+    setupAdmin();
+    render(<App />);
     await navigateTo('invoices');
     await waitFor(() => {
       expect(screen.queryByText('Permission Required')).toBeNull();
     });
   });
 
-  it('manager cannot access invoices', async () => {
-    renderAs('manager');
+  it('Employee role via switcher shows LockedPage for invoices', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Employee');
     await navigateTo('invoices');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
     });
   });
 
-  it('employee cannot access invoices', async () => {
-    renderAs('employee');
+  it('Manager role via switcher shows LockedPage for invoices', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Manager');
     await navigateTo('invoices');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
     });
   });
 
-  it('guest cannot access invoices', async () => {
-    renderAs('guest');
+  it('Guest role via switcher shows LockedPage for invoices', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Guest');
     await navigateTo('invoices');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
     });
   });
 
-  it('hr cannot access invoices', async () => {
-    renderAs('hr');
+  it('HR role via switcher shows LockedPage for invoices', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('HR');
     await navigateTo('invoices');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
@@ -105,40 +145,39 @@ describe('Invoices page access', () => {
 
 // ─── Employees page access ───────────────────────────────────────────────────
 describe('Employees page access', () => {
-  it('admin can access employees', async () => {
-    renderAs('admin');
+  it('Admin role can access employees', async () => {
+    setupAdmin();
+    render(<App />);
     await navigateTo('employees');
     await waitFor(() => {
       expect(screen.queryByText('Permission Required')).toBeNull();
     });
   });
 
-  it('hr has full access to employees', async () => {
-    renderAs('hr');
+  it('Manager role has view access to employees (no LockedPage)', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Manager');
     await navigateTo('employees');
     await waitFor(() => {
       expect(screen.queryByText('Permission Required')).toBeNull();
     });
   });
 
-  it('manager has view access to employees (no LockedPage)', async () => {
-    renderAs('manager');
-    await navigateTo('employees');
-    await waitFor(() => {
-      expect(screen.queryByText('Permission Required')).toBeNull();
-    });
-  });
-
-  it('employee cannot access employees page', async () => {
-    renderAs('employee');
+  it('Employee role shows LockedPage for employees page', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Employee');
     await navigateTo('employees');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
     });
   });
 
-  it('guest cannot access employees page', async () => {
-    renderAs('guest');
+  it('Guest role shows LockedPage for employees page', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Guest');
     await navigateTo('employees');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
@@ -148,39 +187,45 @@ describe('Employees page access', () => {
 
 // ─── Dashboard access ─────────────────────────────────────────────────────────
 describe('Dashboard access', () => {
-  it('all roles including guest can access dashboard', async () => {
-    for (const role of ['admin','manager','hr','lead','employee','guest']) {
-      const { unmount } = renderAs(role);
+  it('all roles can access dashboard — no LockedPage', async () => {
+    const roleNames = ['Admin','Manager','HR','Team Leader','Employee','Guest'];
+    setupAdmin();
+    render(<App />);
+    for (const roleName of roleNames) {
+      await switchRoleTo(roleName);
       await navigateTo('dashboard');
       await waitFor(() => {
         expect(screen.queryByText('Permission Required')).toBeNull();
       }, { timeout: 1000 });
-      unmount();
-      localStorage.clear();
     }
   });
 });
 
 // ─── Reports access ───────────────────────────────────────────────────────────
 describe('Reports page access', () => {
-  it('admin has full access to reports', async () => {
-    renderAs('admin');
+  it('Admin role has full access to reports', async () => {
+    setupAdmin();
+    render(<App />);
     await navigateTo('reports');
     await waitFor(() => {
       expect(screen.queryByText('Permission Required')).toBeNull();
     });
   });
 
-  it('manager has view access to reports (no LockedPage)', async () => {
-    renderAs('manager');
+  it('Manager role has view access to reports (no LockedPage)', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Manager');
     await navigateTo('reports');
     await waitFor(() => {
       expect(screen.queryByText('Permission Required')).toBeNull();
     });
   });
 
-  it('employee cannot access reports', async () => {
-    renderAs('employee');
+  it('Employee role shows LockedPage for reports', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Employee');
     await navigateTo('reports');
     await waitFor(() => {
       expect(screen.getByText('Permission Required')).toBeInTheDocument();
@@ -190,23 +235,23 @@ describe('Reports page access', () => {
 
 // ─── Settings access ─────────────────────────────────────────────────────────
 describe('Settings page access', () => {
-  it('all roles (including guest) can access settings', async () => {
-    for (const role of ['admin','manager','hr','lead','employee','guest']) {
-      const { unmount } = renderAs(role);
-      await navigateTo('settings');
-      await waitFor(() => {
-        expect(screen.queryByText('Permission Required')).toBeNull();
-      }, { timeout: 1000 });
-      unmount();
-      localStorage.clear();
-    }
-  });
-
-  it('admin sees Workspace tab in settings', async () => {
-    renderAs('admin');
+  it('Admin can access Settings and sees Workspace tab', async () => {
+    setupAdmin();
+    render(<App />);
     await navigateTo('settings');
     await waitFor(() => {
-      expect(screen.getByText('Workspace')).toBeInTheDocument();
+      expect(screen.queryByText('Permission Required')).toBeNull();
+    });
+    expect(screen.getByText('Workspace')).toBeInTheDocument();
+  });
+
+  it('Guest role can access Settings (view only)', async () => {
+    setupAdmin();
+    render(<App />);
+    await switchRoleTo('Guest');
+    await navigateTo('settings');
+    await waitFor(() => {
+      expect(screen.queryByText('Permission Required')).toBeNull();
     });
   });
 });

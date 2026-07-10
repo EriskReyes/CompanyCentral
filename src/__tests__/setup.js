@@ -1,13 +1,15 @@
 import '@testing-library/jest-dom';
 import { vi, beforeEach, afterEach } from 'vitest';
 
-global.fetch = vi.fn();
+// Default fetch mock — returns empty success so pages don't crash on unmocked calls
+global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
 
-global.ResizeObserver = vi.fn(() => ({
-  observe: vi.fn(),
-  disconnect: vi.fn(),
-  unobserve: vi.fn(),
-}));
+// ResizeObserver requires a real constructor (arrow functions can't be used with 'new')
+global.ResizeObserver = class {
+  observe() {}
+  disconnect() {}
+  unobserve() {}
+};
 
 window.scrollTo = vi.fn();
 Element.prototype.scrollTo = vi.fn();
@@ -16,7 +18,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   window.location.hash = '';
-  global.fetch = vi.fn();
+  // Restore default fetch mock after vi.clearAllMocks() resets it
+  global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
 });
 
 afterEach(() => {
