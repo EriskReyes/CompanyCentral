@@ -1,5 +1,15 @@
 import mongoose from 'mongoose';                                              // ORM para MongoDB
 
+const taskSchema = new mongoose.Schema(                                        // subdocumento para un bloque de trabajo dentro del día
+  {
+    startTime: { type: String, required: true },                               // inicio del bloque en formato HH:mm
+    endTime:   { type: String, required: true },                               // fin del bloque en formato HH:mm — debe ser mayor que startTime
+    title:     { type: String, required: true, trim: true },                   // nombre descriptivo del bloque de trabajo
+    notes:     { type: String, default: '' },                                  // notas opcionales del bloque
+  },
+  { _id: false }                                                               // sin _id propio — se identifica por posición en el array
+);
+
 const scheduleEntrySchema = new mongoose.Schema(
   {
     companyId: { type: String,                         required: true },       // aislamiento multi-tenant — String igual que User.js y Company.js
@@ -10,7 +20,8 @@ const scheduleEntrySchema = new mongoose.Schema(
       enum:    ['work', 'free', 'vacation', 'sick'],                          // valores válidos
       required: true,                                                          // obligatorio en todo documento
     },
-    workType:  { type: String, default: '' },                                 // descripción del trabajo, relevante solo cuando status === 'work'
+    tasks:     { type: [taskSchema], default: [] },                            // bloques de trabajo con horario — solo aplica cuando status === 'work'
+    workType:  { type: String, default: '' },                                  // fallback legacy — reemplazado por tasks, se conserva para datos existentes
     notes:     { type: String, default: '' },                                 // notas opcionales visibles en el modal
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },        // admin que creó o modificó la entrada
   },

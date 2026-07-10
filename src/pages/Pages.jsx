@@ -1987,6 +1987,12 @@ const STATUS_CFG   = {
   free:     { icon: 'moon',     color: '#6b7a8d',        bg: 'var(--surface-2)',    label: 'Free'     },
 };
 const WORK_TYPES_DEMO = ['Frontend dev','Backend work','Design review','Sprint planning','Client call','Code review','On-site'];
+const DEMO_TASKS_SETS = [ // conjuntos de tareas demo para la vista de día
+  [{ startTime:'08:00', endTime:'12:00', title:'Morning dev session', notes:'' }, { startTime:'13:00', endTime:'17:00', title:'Code review', notes:'' }],
+  [{ startTime:'09:00', endTime:'17:30', title:'Sprint planning', notes:'Full team' }],
+  [{ startTime:'08:30', endTime:'13:00', title:'Client call prep', notes:'' }, { startTime:'14:00', endTime:'18:00', title:'Implementation', notes:'' }],
+  [{ startTime:'10:00', endTime:'18:00', title:'Design sprint', notes:'' }],
+];
 
 function daysInMonth(ym) {
   const [y, m] = ym.split('-').map(Number);
@@ -2000,20 +2006,30 @@ function toDateStr(ym, d) {
   return `${ym}-${String(d).padStart(2, '0')}`;
 }
 function entryKey(userId, date) { return `${userId}_${date}`; }
+function hhmToMin(hm) { const [h, m] = hm.split(':').map(Number); return h * 60 + m; }
 
 export function Dienstplan({ role, isDemo }) {
   const canManage = role === 'admin';
+
+  const [view, setView] = useState('month'); // 'month' | 'day'
 
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [users,   setUsers]   = useState([]);
-  const [entries, setEntries] = useState({});
-  const [modal,   setModal]   = useState(null); // { userId, date, userName } | null
-  const [form,    setForm]    = useState({ status: 'work', workType: '', notes: '' });
-  const [saving,  setSaving]  = useState(false);
+  const [dayDate, setDayDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  });
 
+  const [users,      setUsers]      = useState([]);
+  const [entries,    setEntries]    = useState({});
+  const [dayEntries, setDayEntries] = useState({});
+  const [modal,      setModal]      = useState(null);
+  const [form,       setForm]       = useState({ status: 'work', notes: '', tasks: [] });
+  const [saving,     setSaving]     = useState(false);
+
+  // ── Carga datos del mes ───────────────────────────────────────────────────
   React.useEffect(() => {
     if (isDemo) {
       const demoUsers = D.EMP.map(e => ({ _id: e.id, name: e.name, initials: e.initials, color: e.color, role: e.role }));
@@ -2025,10 +2041,11 @@ export function Dienstplan({ role, isDemo }) {
         for (let d = 1; d <= total; d++) {
           const dow = new Date(y, m - 1, d).getDay();
           if (dow === 0 || dow === 6) continue;
-          const hash = (ei * 31 + d * 7 + m) % 10;
+          const hash   = (ei * 31 + d * 7 + m) % 10;
           const status = hash < 7 ? 'work' : hash === 7 ? 'vacation' : hash === 8 ? 'sick' : 'free';
           const date   = toDateStr(month, d);
-          map[entryKey(emp.id, date)] = { _id: entryKey(emp.id, date), userId: emp.id, date, status, workType: status === 'work' ? WORK_TYPES_DEMO[(ei + d) % WORK_TYPES_DEMO.length] : '', notes: '' };
+          const tasks  = status === 'work' ? DEMO_TASKS_SETS[(ei + d) % DEMO_TASKS_SETS.length] : [];
+          map[entryKey(emp.id, date)] = { _id: entryKey(emp.id, date), userId: emp.id, date, status, tasks, workType: status === 'work' ? WORK_TYPES_DEMO[(ei + d) % WORK_TYPES_DEMO.length] : '', notes: '' };
         }
       });
       setEntries(map);
@@ -2046,34 +2063,70 @@ export function Dienstplan({ role, isDemo }) {
       .catch(() => {});
   }, [month, isDemo]);
 
-  const [y, mn] = month.split('-').map(Number);
+  // ── Carga datos del día (vista Tag) ───────────────────────────────────────
+  React.useEffect(() => {
+    if (view !== 'day') return;
+    if (isDemo) {
+      const filtered = {};
+      Object.values(entries).forEach(e => { if (e.date === dayDate) filtered[entryKey(e.userId, e.date)] = e; });
+      setDayEntries(filtered);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    fetch(`${API_URL}/api/dienstplan/day?date=${dayDate}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { entries: [], users: [] })
+      .then(({ entries: raw }) => {
+        const map = {};
+        raw.forEach(e => { map[entryKey(e.userId, e.date)] = e; });
+        setDayEntries(map);
+      })
+      .catch(() => {});
+  }, [view, dayDate, isDemo, entries]);
+
+  // ── Derivados del mes ────────────────────────────────────────────────────
+  const [y, mn]  = month.split('-').map(Number);
   const totalDays  = daysInMonth(month);
   const days       = Array.from({ length: totalDays }, (_, i) => i + 1);
   const monthLabel = `${DE_MONTHS[mn - 1]} ${y}`;
   const todayStr   = toDateStr(`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`, new Date().getDate());
 
-  const prevMonth = () => {
-    const d = new Date(y, mn - 2, 1);
-    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  };
-  const nextMonth = () => {
-    const d = new Date(y, mn, 1);
-    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  const prevMonth = () => { const d = new Date(y, mn - 2, 1); setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); };
+  const nextMonth = () => { const d = new Date(y, mn,     1); setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); };
+
+  // ── Navegación por día ───────────────────────────────────────────────────
+  const shiftDay = (delta) => {
+    const [dy, dm, dd] = dayDate.split('-').map(Number);
+    const next = new Date(dy, dm - 1, dd + delta);
+    setDayDate(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`);
   };
 
+  const [dateFmt] = useState(() => new Intl.DateTimeFormat('de-DE', { weekday:'long', day:'numeric', month:'long' }));
+  const formatDateLabel = (dateStr) => {
+    const [dy, dm, dd] = dateStr.split('-').map(Number);
+    return dateFmt.format(new Date(dy, dm - 1, dd));
+  };
+
+  // ── Modal ────────────────────────────────────────────────────────────────
   const openModal = (user, date) => {
     if (!canManage) return;
-    const entry = entries[entryKey(user._id, date)];
-    setForm({ status: entry?.status || 'work', workType: entry?.workType || '', notes: entry?.notes || '' });
+    const entry = entries[entryKey(user._id, date)] || dayEntries[entryKey(user._id, date)];
+    setForm({ status: entry?.status || 'work', notes: entry?.notes || '', tasks: entry?.tasks ? entry.tasks.map(t => ({ ...t })) : [] });
     setModal({ userId: user._id, date, userName: user.name, entry: entry || null });
   };
+
+  const addTask    = ()        => setForm(f => ({ ...f, tasks: [...f.tasks, { startTime:'09:00', endTime:'17:00', title:'', notes:'' }] }));
+  const removeTask = (i)       => setForm(f => ({ ...f, tasks: f.tasks.filter((_, ti) => ti !== i) }));
+  const updateTask = (i, k, v) => setForm(f => ({ ...f, tasks: f.tasks.map((t, ti) => ti === i ? { ...t, [k]: v } : t) }));
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      const tasks = form.status === 'work' ? form.tasks : [];
       if (isDemo) {
         const key = entryKey(modal.userId, modal.date);
-        setEntries(prev => ({ ...prev, [key]: { _id: key, userId: modal.userId, date: modal.date, ...form } }));
+        const entry = { _id: key, userId: modal.userId, date: modal.date, ...form, tasks };
+        setEntries(prev => ({ ...prev, [key]: entry }));
+        setDayEntries(prev => ({ ...prev, [key]: entry }));
         setModal(null);
         return;
       }
@@ -2081,12 +2134,13 @@ export function Dienstplan({ role, isDemo }) {
       const res   = await fetch(`${API_URL}/api/dienstplan`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ userId: modal.userId, date: modal.date, ...form }),
+        body:    JSON.stringify({ userId: modal.userId, date: modal.date, ...form, tasks }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
       const key = entryKey(data.userId, data.date);
       setEntries(prev => ({ ...prev, [key]: data }));
+      setDayEntries(prev => ({ ...prev, [key]: data }));
       setModal(null);
     } catch (err) {
       showToast(err.message, 'error');
@@ -2099,6 +2153,7 @@ export function Dienstplan({ role, isDemo }) {
     if (isDemo) {
       const key = entryKey(modal.userId, modal.date);
       setEntries(prev => { const n = { ...prev }; delete n[key]; return n; });
+      setDayEntries(prev => { const n = { ...prev }; delete n[key]; return n; });
       setModal(null);
       return;
     }
@@ -2109,138 +2164,243 @@ export function Dienstplan({ role, isDemo }) {
     if (res.ok) {
       const key = entryKey(modal.userId, modal.date);
       setEntries(prev => { const n = { ...prev }; delete n[key]; return n; });
+      setDayEntries(prev => { const n = { ...prev }; delete n[key]; return n; });
       setModal(null);
     }
   };
 
-  const [dateFmt] = useState(() => new Intl.DateTimeFormat('de-DE', { weekday:'long', day:'numeric', month:'long' }));
-  const formatDateLabel = (dateStr) => {
-    const [dy, dm, dd] = dateStr.split('-').map(Number);
-    return dateFmt.format(new Date(dy, dm - 1, dd));
-  };
+  const CELL_W    = 38;   // px — ancho fijo por columna de día en vista mensual
+  const TL_START  = 6*60; // 06:00 en minutos desde medianoche
+  const TL_END    = 22*60;// 22:00 en minutos
+  const TL_HOURS  = Array.from({ length: 17 }, (_, i) => i + 6); // 06..22
+  const TL_TOTAL  = TL_END - TL_START; // 960 minutos de rango total
+  const HR_H      = 56;   // px por hora en la vista de día
 
-  const CELL_W = 38; // px — ancho fijo por columna de día
+  const viewToggle = (
+    <div style={{ display:'flex', border:'1px solid var(--line)', borderRadius:'var(--r-md)', overflow:'hidden' }}>
+      {['month','day'].map(v => (
+        <button key={v} type="button" onClick={() => setView(v)}
+          style={{ padding:'5px 13px', fontSize:13, fontWeight:600, background: view===v ? 'var(--accent)' : 'transparent', color: view===v ? '#fff' : 'var(--ink-2)', border:'none', borderLeft: v==='day' ? '1px solid var(--line)' : 'none', cursor:'pointer', transition:'all .15s' }}>
+          {v === 'month' ? 'Monat' : 'Tag'}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="page">
       <PageHead
         title="Dienstplan"
-        sub={`${users.length} Mitarbeiter · ${monthLabel}`}
+        sub={`${users.length} Mitarbeiter · ${view === 'month' ? monthLabel : formatDateLabel(dayDate)}`}
         actions={
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <Btn variant="ghost" icon="chevronLeft" sm onClick={prevMonth} />
-            <span style={{ fontSize:15, fontWeight:600, minWidth:130, textAlign:'center' }}>{monthLabel}</span>
-            <Btn variant="ghost" icon="chevronRight" sm onClick={nextMonth} />
+            {viewToggle}
+            {view === 'month' ? (
+              <>
+                <Btn variant="ghost" icon="chevronLeft"  sm onClick={prevMonth} />
+                <span style={{ fontSize:15, fontWeight:600, minWidth:130, textAlign:'center' }}>{monthLabel}</span>
+                <Btn variant="ghost" icon="chevronRight" sm onClick={nextMonth} />
+              </>
+            ) : (
+              <>
+                <Btn variant="ghost" icon="chevronLeft"  sm onClick={() => shiftDay(-1)} />
+                <span style={{ fontSize:14, fontWeight:600, minWidth:180, textAlign:'center' }}>{formatDateLabel(dayDate)}</span>
+                <Btn variant="ghost" icon="chevronRight" sm onClick={() => shiftDay(1)} />
+              </>
+            )}
           </div>
         }
       />
 
-      {/* ── Tabla / Grid ───────────────────────────────────────────────────── */}
-      <div style={{ overflowX:'auto', border:'1px solid var(--line)', borderRadius:'var(--r-lg)', background:'var(--surface)' }}>
-        <table style={{ borderCollapse:'collapse', minWidth:'100%' }}>
-          <colgroup>
-            <col style={{ width:170, minWidth:170 }} />
-            {days.map(d => <col key={d} style={{ width:CELL_W, minWidth:CELL_W }} />)}
-          </colgroup>
-
-          {/* ── Cabecera con días ──────────────────────────────────────────── */}
-          <thead>
-            <tr>
-              <th style={{ position:'sticky', left:0, top:0, zIndex:4, background:'var(--surface)', padding:'10px 14px', textAlign:'left', fontWeight:600, fontSize:13.5, borderBottom:'1px solid var(--line)', whiteSpace:'nowrap' }}>
-                Mitarbeiter
-              </th>
-              {days.map(d => {
-                const dow    = dowOf(month, d);
-                const isWknd = dow === 0 || dow === 6;
-                const dateS  = toDateStr(month, d);
-                const isToday = dateS === todayStr;
-                return (
-                  <th key={d} style={{ position:'sticky', top:0, zIndex:3, background: isToday ? 'var(--accent-soft)' : isWknd ? 'var(--surface-2)' : 'var(--surface)', borderBottom:'1px solid var(--line)', borderLeft:'1px solid var(--line-2)', padding:'6px 2px', textAlign:'center', fontSize:12 }}>
-                    <div style={{ fontWeight:700, color: isToday ? 'var(--accent-ink)' : isWknd ? 'var(--muted)' : 'var(--ink)' }}>{d}</div>
-                    <div style={{ color:'var(--muted)', fontSize:11, marginTop:1 }}>{DE_DAYS[dow]}</div>
+      {/* ── Vista mensual ──────────────────────────────────────────────────── */}
+      {view === 'month' && (
+        <>
+          <div style={{ overflowX:'auto', border:'1px solid var(--line)', borderRadius:'var(--r-lg)', background:'var(--surface)' }}>
+            <table style={{ borderCollapse:'collapse', minWidth:'100%' }}>
+              <colgroup>
+                <col style={{ width:170, minWidth:170 }} />
+                {days.map(d => <col key={d} style={{ width:CELL_W, minWidth:CELL_W }} />)}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ position:'sticky', left:0, top:0, zIndex:4, background:'var(--surface)', padding:'10px 14px', textAlign:'left', fontWeight:600, fontSize:13.5, borderBottom:'1px solid var(--line)', whiteSpace:'nowrap' }}>
+                    Mitarbeiter
                   </th>
-                );
-              })}
-            </tr>
-          </thead>
+                  {days.map(d => {
+                    const dow     = dowOf(month, d);
+                    const isWknd  = dow === 0 || dow === 6;
+                    const dateS   = toDateStr(month, d);
+                    const isToday = dateS === todayStr;
+                    return (
+                      <th key={d} style={{ position:'sticky', top:0, zIndex:3, background: isToday ? 'var(--accent-soft)' : isWknd ? 'var(--surface-2)' : 'var(--surface)', borderBottom:'1px solid var(--line)', borderLeft:'1px solid var(--line-2)', padding:'6px 2px', textAlign:'center', fontSize:12 }}>
+                        <div style={{ fontWeight:700, color: isToday ? 'var(--accent-ink)' : isWknd ? 'var(--muted)' : 'var(--ink)' }}>{d}</div>
+                        <div style={{ color:'var(--muted)', fontSize:11, marginTop:1 }}>{DE_DAYS[dow]}</div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={totalDays + 1} style={{ textAlign:'center', padding:'40px 0', color:'var(--muted)', fontSize:15 }}>
+                      No employees found for this workspace.
+                    </td>
+                  </tr>
+                )}
+                {users.map(user => (
+                  <tr key={user._id} style={{ borderTop:'1px solid var(--line-2)' }}>
+                    <td style={{ position:'sticky', left:0, zIndex:1, background:'var(--surface)', padding:'6px 14px', whiteSpace:'nowrap', borderRight:'1px solid var(--line)' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                        <div style={{ width:26, height:26, borderRadius:99, background:user.color||'#6b7a8d', color:'#fff', fontSize:11, fontWeight:700, display:'grid', placeItems:'center', flexShrink:0 }}>
+                          {user.initials||'?'}
+                        </div>
+                        <span style={{ fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', maxWidth:110 }}>{user.name}</span>
+                      </div>
+                    </td>
+                    {days.map(d => {
+                      const dateS    = toDateStr(month, d);
+                      const dow      = dowOf(month, d);
+                      const isWknd   = dow === 0 || dow === 6;
+                      const isToday  = dateS === todayStr;
+                      const entry    = entries[entryKey(user._id, dateS)];
+                      const cfg      = entry ? STATUS_CFG[entry.status] : null;
+                      const taskCnt  = entry?.tasks?.length || 0;
+                      const tipText  = entry?.status === 'work' && taskCnt > 0
+                        ? entry.tasks.map(t => `${t.startTime}–${t.endTime}  ${t.title}`).join('\n')
+                        : entry?.workType || undefined;
+                      return (
+                        <td key={d}
+                          onClick={() => openModal(user, dateS)}
+                          title={tipText}
+                          style={{ textAlign:'center', borderLeft:'1px solid var(--line-2)', padding:'3px 1px', cursor: canManage ? 'pointer' : 'default', background: isToday ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : isWknd ? 'var(--surface-2)' : undefined, transition:'background .1s' }}>
+                          {cfg && (
+                            <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:30, borderRadius:6, margin:'1px', background: cfg.bg, gap:3 }}>
+                              <Icon name={cfg.icon} size={13} style={{ color:cfg.color }} />
+                              {entry.status === 'work' && taskCnt > 0 && (
+                                <span style={{ fontSize:9, fontWeight:700, color:cfg.color, lineHeight:1 }}>{taskCnt}</span>
+                              )}
+                            </div>
+                          )}
+                          {!cfg && canManage && (
+                            <div style={{ height:30, display:'flex', justifyContent:'center', alignItems:'center', opacity:0 }} className="cell-add-hint">
+                              <Icon name="plus" size={12} style={{ color:'var(--muted)' }} />
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          {/* ── Filas por empleado ─────────────────────────────────────────── */}
-          <tbody>
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={totalDays + 1} style={{ textAlign:'center', padding:'40px 0', color:'var(--muted)', fontSize:15 }}>
-                  No employees found for this workspace.
-                </td>
-              </tr>
-            )}
-            {users.map((user, ui) => (
-              <tr key={user._id} style={{ borderTop:'1px solid var(--line-2)' }}>
-                {/* Nombre del empleado — columna fija */}
-                <td style={{ position:'sticky', left:0, zIndex:1, background:'var(--surface)', padding:'6px 14px', whiteSpace:'nowrap', borderRight:'1px solid var(--line)' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-                    <div style={{ width:26, height:26, borderRadius:99, background:user.color||'#6b7a8d', color:'#fff', fontSize:11, fontWeight:700, display:'grid', placeItems:'center', flexShrink:0 }}>
+          {/* Leyenda */}
+          <div style={{ display:'flex', gap:20, flexWrap:'wrap', padding:'12px 16px', background:'var(--surface-2)', borderRadius:'var(--r-lg)', border:'1px solid var(--line)', marginTop:'var(--gap)', alignItems:'center' }}>
+            {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+              <div key={key} style={{ display:'flex', alignItems:'center', gap:6, fontSize:14 }}>
+                <div style={{ width:22, height:22, borderRadius:5, background:cfg.bg, display:'grid', placeItems:'center' }}>
+                  <Icon name={cfg.icon} size={12} style={{ color:cfg.color }} />
+                </div>
+                <span style={{ color:'var(--ink-2)' }}>{cfg.label}</span>
+              </div>
+            ))}
+            <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:14 }}>
+              <div style={{ width:22, height:22, borderRadius:5, background:'var(--surface-2)', border:'1px solid var(--line)' }} />
+              <span style={{ color:'var(--muted)' }}>Weekend</span>
+            </div>
+            {!canManage && <span style={{ marginLeft:'auto', fontSize:13, color:'var(--muted)' }}>Read-only view</span>}
+          </div>
+        </>
+      )}
+
+      {/* ── Vista de día (timeline 06:00–22:00) ────────────────────────────── */}
+      {view === 'day' && (
+        <div style={{ overflowX:'auto', border:'1px solid var(--line)', borderRadius:'var(--r-lg)', background:'var(--surface)' }}>
+          <div style={{ display:'flex', minWidth: Math.max(600, users.length * 140 + 60) }}>
+
+            {/* Eje horario */}
+            <div style={{ width:54, flexShrink:0, borderRight:'1px solid var(--line)', paddingTop:41 }}>
+              {TL_HOURS.map(h => (
+                <div key={h} style={{ height:HR_H, display:'flex', alignItems:'flex-start', paddingLeft:6, paddingTop:4, fontSize:11, color:'var(--muted)', borderTop:'1px solid var(--line-2)', boxSizing:'border-box' }}>
+                  {String(h).padStart(2,'0')}:00
+                </div>
+              ))}
+            </div>
+
+            {/* Columna por empleado */}
+            {users.map(user => {
+              const entry  = dayEntries[entryKey(user._id, dayDate)];
+              const cfg    = entry ? STATUS_CFG[entry.status] : null;
+              const dimmed = entry && entry.status !== 'work';
+              return (
+                <div key={user._id} style={{ flex:'1 1 130px', minWidth:130, borderLeft:'1px solid var(--line-2)', display:'flex', flexDirection:'column' }}>
+                  {/* Cabecera de empleado */}
+                  <div style={{ height:40, display:'flex', alignItems:'center', justifyContent:'center', gap:7, borderBottom:'1px solid var(--line)', padding:'0 8px', flexShrink:0, background:'var(--surface)' }}>
+                    <div style={{ width:22, height:22, borderRadius:99, background:user.color||'#6b7a8d', color:'#fff', fontSize:10, fontWeight:700, display:'grid', placeItems:'center', flexShrink:0 }}>
                       {user.initials||'?'}
                     </div>
-                    <span style={{ fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', maxWidth:110 }}>{user.name}</span>
+                    <span style={{ fontSize:12.5, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.name}</span>
+                    {cfg && <div style={{ width:7, height:7, borderRadius:99, background:cfg.color, flexShrink:0 }} title={cfg.label} />}
                   </div>
-                </td>
 
-                {/* Celda por día */}
-                {days.map(d => {
-                  const dateS  = toDateStr(month, d);
-                  const dow    = dowOf(month, d);
-                  const isWknd = dow === 0 || dow === 6;
-                  const isToday = dateS === todayStr;
-                  const entry  = entries[entryKey(user._id, dateS)];
-                  const cfg    = entry ? STATUS_CFG[entry.status] : null;
-                  return (
-                    <td key={d}
-                      onClick={() => openModal(user, dateS)}
-                      title={entry?.status === 'work' && entry.workType ? entry.workType : undefined}
-                      style={{ textAlign:'center', borderLeft:'1px solid var(--line-2)', padding:'3px 1px', cursor: canManage ? 'pointer' : 'default', background: isToday ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : isWknd ? 'var(--surface-2)' : undefined, transition:'background .1s' }}>
-                      {cfg && (
-                        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:30, borderRadius:6, margin:'1px', background: cfg.bg }}>
-                          <Icon name={cfg.icon} size={13} style={{ color:cfg.color }} />
+                  {/* Área de timeline */}
+                  <div style={{ position:'relative', height: TL_HOURS.length * HR_H, cursor: canManage ? 'pointer' : 'default', background: dimmed ? 'repeating-linear-gradient(135deg,transparent,transparent 6px,rgba(0,0,0,.018) 6px,rgba(0,0,0,.018) 12px)' : undefined }}
+                    onClick={() => canManage && openModal(user, dayDate)}>
+                    {/* Líneas de hora */}
+                    {TL_HOURS.map((_, hi) => (
+                      <div key={hi} style={{ position:'absolute', top: hi * HR_H, left:0, right:0, borderTop:'1px solid var(--line-2)' }} />
+                    ))}
+                    {/* Fondo de estado no-work */}
+                    {cfg && entry.status !== 'work' && (
+                      <div style={{ position:'absolute', inset:0, background:cfg.bg, opacity:.35, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:4 }}>
+                        <Icon name={cfg.icon} size={26} style={{ color:cfg.color, opacity:.6 }} />
+                        <span style={{ fontSize:12, color:cfg.color, fontWeight:600 }}>{cfg.label}</span>
+                      </div>
+                    )}
+                    {/* Bloques de tarea */}
+                    {entry?.status === 'work' && (entry.tasks || []).map((task, ti) => {
+                      const startMin = hhmToMin(task.startTime);
+                      const endMin   = hhmToMin(task.endTime);
+                      const top    = (startMin - TL_START) / TL_TOTAL * (TL_HOURS.length * HR_H);
+                      const height = Math.max(22, (endMin - startMin) / TL_TOTAL * (TL_HOURS.length * HR_H));
+                      return (
+                        <div key={ti} style={{ position:'absolute', top, left:4, right:4, height, background:'var(--accent)', borderRadius:5, padding:'3px 6px', overflow:'hidden', boxSizing:'border-box', zIndex:1 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:'#fff', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                            {task.startTime}–{task.endTime}
+                          </div>
+                          <div style={{ fontSize:10, color:'rgba(255,255,255,.85)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                            {task.title}
+                          </div>
                         </div>
-                      )}
-                      {!cfg && canManage && (
-                        <div style={{ height:30, display:'flex', justifyContent:'center', alignItems:'center', opacity:0 }} className="cell-add-hint">
-                          <Icon name="plus" size={12} style={{ color:'var(--muted)' }} />
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      );
+                    })}
+                    {/* Hint de celda vacía */}
+                    {!entry && canManage && (
+                      <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', opacity:.25 }}>
+                        <Icon name="plus" size={20} style={{ color:'var(--muted)' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
-      {/* ── Leyenda ────────────────────────────────────────────────────────── */}
-      <div style={{ display:'flex', gap:20, flexWrap:'wrap', padding:'12px 16px', background:'var(--surface-2)', borderRadius:'var(--r-lg)', border:'1px solid var(--line)', marginTop:'var(--gap)', alignItems:'center' }}>
-        {Object.entries(STATUS_CFG).map(([key, cfg]) => (
-          <div key={key} style={{ display:'flex', alignItems:'center', gap:6, fontSize:14 }}>
-            <div style={{ width:22, height:22, borderRadius:5, background:cfg.bg, display:'grid', placeItems:'center' }}>
-              <Icon name={cfg.icon} size={12} style={{ color:cfg.color }} />
-            </div>
-            <span style={{ color:'var(--ink-2)' }}>{cfg.label}</span>
+            {users.length === 0 && (
+              <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--muted)', fontSize:15, padding:40 }}>
+                No employees found for this workspace.
+              </div>
+            )}
           </div>
-        ))}
-        <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:14 }}>
-          <div style={{ width:22, height:22, borderRadius:5, background:'var(--surface-2)', border:'1px solid var(--line)' }} />
-          <span style={{ color:'var(--muted)' }}>Weekend</span>
         </div>
-        {!canManage && (
-          <span style={{ marginLeft:'auto', fontSize:13, color:'var(--muted)' }}>Read-only view</span>
-        )}
-      </div>
+      )}
 
       {/* ── Modal de edición ───────────────────────────────────────────────── */}
       {modal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}
           onClick={e => e.target === e.currentTarget && setModal(null)}>
-          <div style={{ background:'var(--surface)', borderRadius:'var(--r-lg)', padding:24, minWidth:360, maxWidth:440, border:'1px solid var(--line)', boxShadow:'0 20px 60px rgba(0,0,0,.4)' }}>
+          <div style={{ background:'var(--surface)', borderRadius:'var(--r-lg)', padding:24, minWidth:380, maxWidth:460, width:'100%', maxHeight:'85vh', overflowY:'auto', border:'1px solid var(--line)', boxShadow:'0 20px 60px rgba(0,0,0,.4)' }}>
             <div style={{ fontSize:17, fontWeight:700, marginBottom:4 }}>Schicht bearbeiten</div>
             <div className="muted" style={{ fontSize:14, marginBottom:20 }}>
               {modal.userName} · {formatDateLabel(modal.date)}
@@ -2250,7 +2410,7 @@ export function Dienstplan({ role, isDemo }) {
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
               {Object.entries(STATUS_CFG).map(([key, cfg]) => (
                 <button key={key} type="button"
-                  onClick={() => setForm({ ...form, status: key })}
+                  onClick={() => setForm(f => ({ ...f, status: key, tasks: key !== 'work' ? [] : f.tasks }))}
                   style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', background: form.status === key ? cfg.bg : 'var(--surface-2)', border:`1.5px solid ${form.status === key ? cfg.color : 'transparent'}`, borderRadius:'var(--r-md)', cursor:'pointer', fontSize:14, fontWeight: form.status === key ? 700 : 500, color: form.status === key ? cfg.color : 'var(--ink-2)', transition:'all .15s' }}>
                   <Icon name={cfg.icon} size={15} style={{ color:cfg.color }} />
                   {cfg.label}
@@ -2258,24 +2418,60 @@ export function Dienstplan({ role, isDemo }) {
               ))}
             </div>
 
+            {/* Editor de bloques de trabajo */}
             {form.status === 'work' && (
               <div style={{ marginBottom:14 }}>
-                <label className="fieldlabel">Arbeitstyp</label>
-                <input className="input" style={{ width:'100%' }} placeholder="z. B. Frontend-Entwicklung"
-                  value={form.workType} onChange={e => setForm({ ...form, workType:e.target.value })} />
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                  <label className="fieldlabel" style={{ margin:0 }}>Arbeitsblöcke</label>
+                  <button type="button" onClick={addTask}
+                    style={{ fontSize:12, color:'var(--accent)', fontWeight:600, background:'none', border:'none', cursor:'pointer', padding:'2px 6px' }}>
+                    + Block hinzufügen
+                  </button>
+                </div>
+                {form.tasks.length === 0 && (
+                  <div style={{ fontSize:13, color:'var(--muted)', padding:'8px 0' }}>Noch keine Blöcke — klick auf "+ Block hinzufügen".</div>
+                )}
+                {form.tasks.map((task, i) => (
+                  <div key={i} style={{ background:'var(--surface-2)', borderRadius:'var(--r-md)', padding:12, marginBottom:8, border:'1px solid var(--line-2)' }}>
+                    <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+                      <div style={{ flex:1 }}>
+                        <label className="fieldlabel" style={{ fontSize:11 }}>Von</label>
+                        <input type="time" className="input" style={{ width:'100%' }}
+                          value={task.startTime} onChange={e => updateTask(i, 'startTime', e.target.value)} />
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <label className="fieldlabel" style={{ fontSize:11 }}>Bis</label>
+                        <input type="time" className="input" style={{ width:'100%' }}
+                          value={task.endTime} onChange={e => updateTask(i, 'endTime', e.target.value)} />
+                      </div>
+                      <button type="button" onClick={() => removeTask(i)}
+                        style={{ alignSelf:'flex-end', padding:'6px 8px', background:'none', border:'none', cursor:'pointer', color:'var(--muted)' }}>
+                        <Icon name="x" size={14} />
+                      </button>
+                    </div>
+                    <div style={{ marginBottom:6 }}>
+                      <label className="fieldlabel" style={{ fontSize:11 }}>Titel</label>
+                      <input className="input" style={{ width:'100%' }} placeholder="z. B. Frontend-Entwicklung"
+                        value={task.title} onChange={e => updateTask(i, 'title', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="fieldlabel" style={{ fontSize:11 }}>Notizen</label>
+                      <input className="input" style={{ width:'100%' }} placeholder="Optional…"
+                        value={task.notes} onChange={e => updateTask(i, 'notes', e.target.value)} />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
             <div style={{ marginBottom:22 }}>
               <label className="fieldlabel">Notizen (optional)</label>
               <input className="input" style={{ width:'100%' }} placeholder="Weitere Hinweise…"
-                value={form.notes} onChange={e => setForm({ ...form, notes:e.target.value })} />
+                value={form.notes} onChange={e => setForm(f => ({ ...f, notes:e.target.value }))} />
             </div>
 
             <div style={{ display:'flex', gap:8, justifyContent:'flex-end', alignItems:'center' }}>
-              {modal.entry && (
-                <Btn variant="ghost" icon="trash" sm onClick={handleDelete}>Löschen</Btn>
-              )}
+              {modal.entry && <Btn variant="ghost" icon="trash" sm onClick={handleDelete}>Löschen</Btn>}
               <div style={{ flex:1 }} />
               <Btn variant="ghost" onClick={() => setModal(null)}>Abbrechen</Btn>
               <Btn variant="primary" onClick={handleSave} disabled={saving}>
