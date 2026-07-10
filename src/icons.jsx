@@ -67,6 +67,8 @@ const P = {
   info: <><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></>,
   book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17h11A2.5 2.5 0 0 1 20 19.5v.006H4v-.006z"/><path d="M6.5 2h11A2.5 2.5 0 0 1 20 4.5v9A2.5 2.5 0 0 1 17.5 16h-11A2.5 2.5 0 0 1 4 13.5v-9A2.5 2.5 0 0 1 6.5 2z"/></>,
   alphabetical: <><path d="M6 4h3l2.5 7.5L14 4h3M9 11v9M15 11l-1.5 4.5 1.5 4.5h-3"/></>,
+  copy: <><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>,
+  refresh: <><path d="M3 12a9 9 0 0 1 15.6-6.2L21 8M3 16l2.4 2.2A9 9 0 0 0 21 12"/><path d="M21 4v4h-4M3 20v-4h4"/></>,
 };
 
 export function Icon({ name, size = 18, stroke = 1.7, className = "", style, fill }) {

@@ -5,9 +5,10 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
 
-import authRoutes    from './routes/auth.js';
-import teamRoutes    from './routes/team.js';
-import companyRoutes from './routes/company.js';
+import authRoutes       from './routes/auth.js';
+import teamRoutes       from './routes/team.js';
+import companyRoutes    from './routes/company.js';
+import vademecumRoutes  from './routes/vademecum.js'; // módulo de artículos del vademecum
 
 const app = express();
 
@@ -41,9 +42,10 @@ app.get('/api/health', (_req, res) => res.json({
   uptime:   process.uptime(),                                                              // segundos desde que arranco el proceso
 }));
 
-app.use('/api/auth',    authRoutes);   // rutas de autenticacion y registro
-app.use('/api/team',    teamRoutes);   // rutas de empleados
-app.use('/api/company', companyRoutes); // rutas de datos de la empresa
+app.use('/api/auth',      authRoutes);      // rutas de autenticacion y registro
+app.use('/api/team',      teamRoutes);      // rutas de empleados
+app.use('/api/company',   companyRoutes);   // rutas de datos de la empresa
+app.use('/api/vademecum', vademecumRoutes); // rutas de artículos del vademecum
 
 mongoose
   .connect(process.env.MONGODB_URI)

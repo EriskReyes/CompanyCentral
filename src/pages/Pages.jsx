@@ -1461,7 +1461,7 @@ function SetRow({ title, sub, children }) {
   return <div className="set-row"><div className="sr-main"><div className="sr-title">{title}</div>{sub && <div className="sr-sub">{sub}</div>}</div>{children}</div>;
 }
 
-export function Settings({ role, currentUser, onOpenTweaks, company }) {
+export function Settings({ role, currentUser, onOpenTweaks, company, isDemo }) {
   const [tab, setTab] = useState("Profile");
   const [toggles, setToggles] = useState({ email:true, push:true, mentions:true, digest:false, twofa:true, sessions:false });
   const [teamMembers, setTeamMembers] = useState([
@@ -1471,6 +1471,34 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", email: "", role: "employee" });
   const photoUploadRef = useRef(null);
+
+  // Employee credentials state
+  const [credSearch, setCredSearch] = useState("");
+  const [resetMap, setResetMap] = useState({});   // id → new temp password after reset
+  const [copiedId, setCopiedId] = useState(null); // id that was just copied
+
+  // Build employee list with generated codes (demo uses D.EMP, real would fetch)
+  const allEmployees = D.EMP.map(e => {
+    const num = e.id.replace("E-", "");
+    return { ...e, employeeCode: `EMP-${num}` };
+  });
+  const filteredEmployees = allEmployees.filter(e =>
+    e.name.toLowerCase().includes(credSearch.toLowerCase()) ||
+    e.employeeCode.toLowerCase().includes(credSearch.toLowerCase()) ||
+    e.dept.toLowerCase().includes(credSearch.toLowerCase())
+  );
+
+  const handleCopyCode = (e) => {
+    navigator.clipboard?.writeText(e.employeeCode).catch(() => {});
+    setCopiedId(e.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleResetPassword = (e) => {
+    const newPass = Math.random().toString(36).slice(2, 10).toUpperCase();
+    setResetMap(prev => ({ ...prev, [e.id]: newPass }));
+    showToast(`Temporary password reset for ${e.name}`);
+  };
   const tg = k => setToggles(s => ({ ...s, [k]: !s[k] }));
   const roleObj = D.ROLES.find(r => r.key === role);
   const tabs = ["Profile","Notifications","Security","Appearance"].concat(role === "admin" ? ["Workspace","Team Management"] : []);
@@ -1536,13 +1564,95 @@ export function Settings({ role, currentUser, onOpenTweaks, company }) {
       )}
 
       {tab === "Workspace" && role === "admin" && (
-        <Card title="Workspace" sub="Admin-only settings">
-          <SetRow title="Workspace name" sub="Shown across the app and in emails."><input className="input" defaultValue={company?.name || "WorkCentral Inc."} /></SetRow>
-          <SetRow title="Company ID" sub="Unique identifier for your workspace."><Badge tone="gray">{company?.companyId || "WC-2026-XXXX"}</Badge></SetRow>
-          <SetRow title="Industry" sub="Your company's industry sector."><Badge tone="blue">{company?.industry || "Technology"}</Badge></SetRow>
-          <SetRow title="Billing plan" sub="Business · renews Jan 2027"><Badge tone="green" dot>Active</Badge></SetRow>
-          <SetRow title="Data export" sub="Export all workspace data."><Btn variant="ghost" sm icon="download" onClick={() => showToast("Export started — you'll receive an email when ready")}>Export</Btn></SetRow>
-        </Card>
+        <div style={{ display:"flex", flexDirection:"column", gap:"var(--gap)" }}>
+          <Card title="Workspace" sub="Admin-only settings">
+            <SetRow title="Workspace name" sub="Shown across the app and in emails."><input className="input" defaultValue={company?.name || "WorkCentral Inc."} /></SetRow>
+            <SetRow title="Company ID" sub="Unique identifier for your workspace. Employees need this to log in.">
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <Badge tone="gray">{company?.companyId || "WC-2026-XXXX"}</Badge>
+                <Btn variant="ghost" sm icon="copy" onClick={() => {
+                  navigator.clipboard?.writeText(company?.companyId || "WC-2026-XXXX").catch(() => {});
+                  showToast("Company ID copied");
+                }}>Copy</Btn>
+              </div>
+            </SetRow>
+            <SetRow title="Industry" sub="Your company's industry sector."><Badge tone="blue">{company?.industry || "Technology"}</Badge></SetRow>
+            <SetRow title="Billing plan" sub="Business · renews Jan 2027"><Badge tone="green" dot>Active</Badge></SetRow>
+            <SetRow title="Data export" sub="Export all workspace data."><Btn variant="ghost" sm icon="download" onClick={() => showToast("Export started — you'll receive an email when ready")}>Export</Btn></SetRow>
+          </Card>
+
+          <Card title="Employee Credentials" sub="View and reset login codes for your team. Share these if someone loses access.">
+            <div style={{ marginBottom:14 }}>
+              <Search placeholder="Search by name, code or department…" value={credSearch} onChange={setCredSearch} />
+            </div>
+            <div style={{ overflowX:"auto" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Employee Code</th>
+                    <th>Temp Password</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmployees.map(e => (
+                    <tr key={e.id}>
+                      <td><Person id={e.id} /></td>
+                      <td style={{ fontSize:14, color:"var(--ink-3)" }}>{e.dept}</td>
+                      <td>
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <span style={{
+                            fontFamily:"var(--mono)", fontSize:13, fontWeight:600,
+                            color:"var(--accent-ink)", background:"var(--accent-soft)",
+                            padding:"3px 8px", borderRadius:"var(--r-sm)", letterSpacing:".04em"
+                          }}>{e.employeeCode}</span>
+                          <Btn variant="ghost" sm icon={copiedId === e.id ? "check" : "copy"}
+                            onClick={() => handleCopyCode(e)}>
+                            {copiedId === e.id ? "Copied" : "Copy"}
+                          </Btn>
+                        </div>
+                      </td>
+                      <td>
+                        {resetMap[e.id] ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <span style={{
+                              fontFamily:"var(--mono)", fontSize:13, fontWeight:600,
+                              color:"var(--ink)", background:"var(--surface-2)",
+                              padding:"3px 8px", borderRadius:"var(--r-sm)", border:"1px solid var(--line)"
+                            }}>{resetMap[e.id]}</span>
+                            <Btn variant="ghost" sm icon="copy" onClick={() => {
+                              navigator.clipboard?.writeText(resetMap[e.id]).catch(() => {});
+                              showToast("Password copied");
+                            }}>Copy</Btn>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize:13, color:"var(--muted)" }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign:"right" }}>
+                        <Btn variant="ghost" sm icon="refresh" onClick={() => handleResetPassword(e)}>
+                          Reset password
+                        </Btn>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredEmployees.length === 0 && (
+                    <tr><td colSpan={5} style={{ textAlign:"center", color:"var(--muted)", padding:"20px 0" }}>No employees match your search</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop:12, padding:"10px 12px", background:"var(--surface-2)", borderRadius:"var(--r-md)", fontSize:13, color:"var(--muted)", display:"flex", gap:6, alignItems:"flex-start" }}>
+              <Icon name="info" size={14} style={{ marginTop:1, flexShrink:0 }} />
+              <span>
+                To log in, employees use the <strong>Employee Code tab</strong> on the login screen with:
+                Company ID <strong>{company?.companyId || "WC-2026-XXXX"}</strong> + their Employee Code + their password.
+              </span>
+            </div>
+          </Card>
+        </div>
       )}
 
       {tab === "Team Management" && role === "admin" && (
