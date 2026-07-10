@@ -59,6 +59,7 @@ export default function App() {
   const [route, setRoute] = useState(() => location.hash.replace("#", "") || "dashboard");
   const [role, setRole] = useState("admin");
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken'));
   const [currentUserData, setCurrentUserData] = useState(() => {
     const stored = localStorage.getItem('user');
@@ -139,6 +140,7 @@ export default function App() {
   const navigate = (key) => {
     setRoute(key);
     location.hash = key;
+    setMobileSidebarOpen(false);
     document.querySelector(".content")?.scrollTo(0, 0);
   };
 
@@ -169,6 +171,8 @@ export default function App() {
         currentUser={currentUser}
         company={companyData}
         onLogout={handleLogout}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
       />
       <div className="main">
         <TopBar
@@ -177,6 +181,7 @@ export default function App() {
           role={currentUserData?.role || role}
           onRole={(r) => setRole(r)}
           onToggleCollapse={() => setCollapsed(c => !c)}
+          onToggleMobileSidebar={() => setMobileSidebarOpen(m => !m)}
           onNavigate={navigate}
           company={companyData}
           onLogout={handleLogout}

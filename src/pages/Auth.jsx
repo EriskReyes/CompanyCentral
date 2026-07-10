@@ -53,17 +53,9 @@ export function Login({ onLogin }) {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--surface)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+    <div className="auth-wrap" style={{ backgroundColor: 'var(--surface)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Left Panel - Real Office Photo */}
-      <div style={{
-        flex: '0 0 50%',
-        background: 'var(--surface-2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRight: '1px solid #e2e8f0',
-        overflow: 'hidden'
-      }}>
+      <div className="auth-left">
         <img
           src="https://static.wixstatic.com/media/fe8534_730700b2a18947aa9b38cc02530088a0~mv2.jpg"
           alt="Office workspace"
@@ -77,16 +69,9 @@ export function Login({ onLogin }) {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div style={{
-        flex: '0 0 50%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '60px 50px',
+      <div className="auth-right" style={{
         background: 'var(--bg)',
         backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px)',
-        overflow: 'auto'
       }}>
         <div style={{ width: '100%', maxWidth: '420px' }}>
           {/* Logo and Branding */}
@@ -353,17 +338,9 @@ export function Register({ onRegister }) {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--surface)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+    <div className="auth-wrap" style={{ backgroundColor: 'var(--surface)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Left Panel - Real Office Photo */}
-      <div style={{
-        flex: '0 0 50%',
-        background: 'var(--surface-2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRight: '1px solid #e2e8f0',
-        overflow: 'hidden'
-      }}>
+      <div className="auth-left">
         <img
           src="https://static.wixstatic.com/media/fe8534_730700b2a18947aa9b38cc02530088a0~mv2.jpg"
           alt="Office workspace"
@@ -377,16 +354,9 @@ export function Register({ onRegister }) {
       </div>
 
       {/* Right Panel - Register Form */}
-      <div style={{
-        flex: '0 0 50%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '60px 50px',
+      <div className="auth-right" style={{
         background: 'var(--bg)',
         backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px)',
-        overflow: 'auto'
       }}>
         <div style={{ width: '100%', maxWidth: '420px' }}>
           {/* Logo and Branding */}

@@ -11,14 +11,16 @@ function useClickOutside(ref, onClose) {
   }, []);
 }
 
-export function Sidebar({ active, onNavigate, collapsed, role, currentUser, company, onLogout }) {
+export function Sidebar({ active, onNavigate, collapsed, role, currentUser, company, onLogout, mobileOpen, onCloseMobile }) {
   const [showMenu, setShowMenu] = useState(false);
   const ref = useRef();
   useClickOutside(ref, () => setShowMenu(false));
 
   const roleObj = ROLES.find(r => r.key === role);
   return (
-    <aside className="sidebar">
+    <>
+    {mobileOpen && <div className="sidebar-overlay" onClick={onCloseMobile} />}
+    <aside className={`sidebar${mobileOpen ? ' mobile-open' : ''}`}>
       <div className="side-brand" onClick={() => onNavigate("dashboard")} style={{ cursor: "pointer" }}>
         <div className="brand-mark">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -96,6 +98,7 @@ export function Sidebar({ active, onNavigate, collapsed, role, currentUser, comp
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -145,10 +148,17 @@ function RoleSwitcher({ role, onChange }) {
   );
 }
 
-export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigate, company, onLogout, theme, onToggleTheme }) {
+export function TopBar({ title, crumb, role, onRole, onToggleCollapse, onNavigate, company, onLogout, theme, onToggleTheme, onToggleMobileSidebar }) {
+  const handleMenuClick = () => {
+    if (window.innerWidth <= 768) {
+      onToggleMobileSidebar?.();
+    } else {
+      onToggleCollapse();
+    }
+  };
   return (
     <header className="topbar">
-      <button className="tb-collapse" onClick={onToggleCollapse} title="Toggle sidebar"><Icon name="panelLeft" size={18} /></button>
+      <button className="tb-collapse" onClick={handleMenuClick} title="Toggle sidebar"><Icon name="panelLeft" size={18} /></button>
       <div>
         <div className="tb-title">{title}</div>
       </div>
