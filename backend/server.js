@@ -11,13 +11,17 @@ import companyRoutes from './routes/company.js';
 
 const app = express();
 
-const ALLOWED_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim());
+const ALLOWED_ORIGINS = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim()); // origenes exactos permitidos
+const VERCEL_PATTERN  = /^https:\/\/company-central[a-z0-9\-]*\.vercel\.app$/;                                  // acepta todas las preview URLs de Vercel
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
+    if (!origin)                           return cb(null, true);              // permite llamadas sin origen (Postman, curl)
+    if (ALLOWED_ORIGINS.includes(origin))  return cb(null, true);              // origen exacto en la lista
+    if (VERCEL_PATTERN.test(origin))       return cb(null, true);              // cualquier preview URL del proyecto en Vercel
+    cb(new Error('Not allowed by CORS'));                                       // cualquier otro origen bloqueado
   },
-  credentials: true,
+  credentials: true,                                                           // permite cookies httpOnly (refresh token)
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -41,7 +45,6 @@ app.use('/api/auth',    authRoutes);   // rutas de autenticacion y registro
 app.use('/api/team',    teamRoutes);   // rutas de empleados
 app.use('/api/company', companyRoutes); // rutas de datos de la empresa
 
-console.log('ENV CHECK — MONGODB_URI defined:', !!process.env.MONGODB_URI);
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
