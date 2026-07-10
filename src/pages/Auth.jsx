@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_URL } from '../config'; // Zentrale Backend-URL
 
 export function Login({ onLogin }) {
   const [mode, setMode] = useState('email'); // 'email' | 'employee'
@@ -23,10 +24,10 @@ export function Login({ onLogin }) {
     try {
       let url, body;
       if (mode === 'email') {
-        url  = '/api/auth/login';
+        url  = `${API_URL}/api/auth/login`;          // Admin-Login per E-Mail
         body = JSON.stringify({ email, password });
       } else {
-        url  = '/api/auth/employee-login';
+        url  = `${API_URL}/api/auth/employee-login`; // Mitarbeiter-Login per Code
         body = JSON.stringify({ companyId, employeeCode, password: empPassword });
       }
 
@@ -328,7 +329,7 @@ export function Register({ onRegister }) {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_URL}/api/auth/register`, { // Neues Unternehmen registrieren
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company, admin }),

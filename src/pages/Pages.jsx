@@ -1,6 +1,7 @@
 // CAMBIOS: todos los componentes aceptan prop isDemo — datos vacios para empresas reales, datos demo solo con token 'dev-mock-token'
-// Componentes actualizados: Documents, Files, Announcements, Clients, Invoices, Reports, Messages, Meetings, Notifications, Schedule
+// Komponenten aktualisiert: Documents, Files, Announcements, Clients, Invoices, Reports, Messages, Meetings, Notifications, Schedule
 import React, { useState, useRef } from 'react';
+import { API_URL } from '../config'; // Zentrale Backend-URL für alle API-Aufrufe
 import { Icon } from '../icons';
 import { Card, Btn, Badge, StatusBadge, Priority, Progress, Avatar, AvatarStack, Person, Search, Select, Seg, Tabs, PageHead, EmptyState, BarChart, Donut, showToast } from '../ui';
 import * as D from '../data';
@@ -300,7 +301,7 @@ export function Employees({ company, isDemo }) {
   React.useEffect(() => {
     if (isDemo) { setEmployees(D.EMP); return; }
     const token = localStorage.getItem('authToken');
-    fetch('/api/team/members', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_URL}/api/team/members`, { headers: { Authorization: `Bearer ${token}` } }) // Mitarbeiterliste laden
       .then(r => r.ok ? r.json() : [])
       .then(data => setEmployees(Array.isArray(data) ? data : []))
       .catch(() => {});
@@ -330,7 +331,7 @@ export function Employees({ company, isDemo }) {
     setSaving(true);
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch("/api/team/members", {
+      const res = await fetch(`${API_URL}/api/team/members`, { // Neuen Mitarbeiter anlegen
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(newEmp),
@@ -360,7 +361,7 @@ export function Employees({ company, isDemo }) {
   const handleUpdateCode = async (id, newCode) => {
     if (!newCode.trim()) return;
     const token = localStorage.getItem("authToken");
-    const res = await fetch(`/api/team/members/${id}/code`, {
+    const res = await fetch(`${API_URL}/api/team/members/${id}/code`, { // Mitarbeitercode aktualisieren
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ employeeCode: newCode }),
