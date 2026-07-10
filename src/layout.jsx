@@ -31,9 +31,9 @@ export function Sidebar({ active, onNavigate, collapsed, role, currentUser, comp
       </div>
 
       {company && (
-        <div style={{ padding:"12px 14px", borderBottom:"1px solid var(--line)", fontSize: 13.5, color:"var(--muted)" }}>
-          <div style={{ fontWeight:600, color:"var(--ink-2)", marginBottom:3 }}>{company.name}</div>
-          <div style={{ fontSize: 12 }}>{company.companyId}</div>
+        <div style={{ padding:"10px 14px", borderBottom:"1px solid var(--side-line)", display:"flex", flexDirection:"column", gap:2 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:"var(--side-ink)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{company.name}</div>
+          <div style={{ fontSize:11.5, fontFamily:"var(--mono)", fontWeight:500, color:"var(--side-ink-dim)", letterSpacing:".04em", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{company.companyId}</div>
         </div>
       )}
 
