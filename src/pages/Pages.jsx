@@ -2056,18 +2056,305 @@ export function Personalreglement({ onNavigate }) {
 }
 
 // ========== VADEMECUM ==========
-export function Vademecum({ onNavigate }) {
+const VADM_CATS = ["All", "Procedures", "Policies", "Emergency", "Guides"];
+const CAT_TONE  = { Procedures: "teal", Policies: "green", Emergency: "red", Guides: "amber" };
+const CAT_ICON  = { Emergency: "zap", Procedures: "documents", Policies: "shield", Guides: "info" };
+const CAT_BG    = { Emergency: "#fbe7e6", Procedures: "var(--accent-soft)", Policies: "#e3f4ec", Guides: "#fbf0db" };
+const CAT_FG    = { Emergency: "#a8312b", Procedures: "var(--accent-ink)", Policies: "#0d6b44", Guides: "#95590a" };
+
+function renderMd(text) {
+  if (!text) return null;
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('## ')) {
+      return <div key={i} style={{ fontSize:16.5, fontWeight:700, color:"var(--ink)", margin:"20px 0 6px" }}>{line.slice(3)}</div>;
+    }
+    if (line.startsWith('# ')) {
+      return <div key={i} style={{ fontSize:20, fontWeight:700, color:"var(--ink)", margin:"24px 0 8px" }}>{line.slice(2)}</div>;
+    }
+    const isBullet = line.startsWith('- ');
+    const numMatch = line.match(/^(\d+)\. (.*)/);
+    if (isBullet || numMatch) {
+      const raw   = isBullet ? line.slice(2) : numMatch[2];
+      const label = isBullet ? "•" : numMatch[1] + ".";
+      const parts = raw.split(/\*\*([^*]+)\*\*/g);
+      return (
+        <div key={i} style={{ display:"flex", gap:8, margin:"4px 0", paddingLeft:4, lineHeight:1.65 }}>
+          <span style={{ color:"var(--accent)", flexShrink:0, fontWeight:700, minWidth:16 }}>{label}</span>
+          <span style={{ color:"var(--ink-2)" }}>
+            {parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ color:"var(--ink)" }}>{p}</strong> : p)}
+          </span>
+        </div>
+      );
+    }
+    if (line === '') return <div key={i} style={{ height:10 }} />;
+    const parts = line.split(/\*\*([^*]+)\*\*/g);
+    return (
+      <p key={i} style={{ margin:"4px 0", lineHeight:1.75, color:"var(--ink-2)" }}>
+        {parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ color:"var(--ink)" }}>{p}</strong> : p)}
+      </p>
+    );
+  });
+}
+
+function VadRow({ art, onClick }) {
+  const dateStr = art.updatedAt
+    ? new Date(art.updatedAt).toLocaleDateString("en-US", { month:"short", day:"numeric" })
+    : "";
+  return (
+    <div className="lrow" onClick={onClick} style={{ cursor:"pointer", alignItems:"center" }}>
+      <div style={{ width:36, height:36, borderRadius:8, background:CAT_BG[art.category]||"var(--surface-2)", display:"grid", placeItems:"center", flexShrink:0, color:CAT_FG[art.category]||"var(--muted)" }}>
+        <Icon name={CAT_ICON[art.category]||"documents"} size={17} />
+      </div>
+      <div className="lr-main">
+        <div className="lr-title" style={{ display:"flex", alignItems:"center", gap:7 }}>
+          {art.isPinned && <Icon name="pin" size={11} style={{ color:"var(--accent)", flexShrink:0 }} />}
+          {art.title}
+        </div>
+        <div className="lr-sub">{art.createdBy?.name}{dateStr ? ` · ${dateStr}` : ""}</div>
+      </div>
+      <Badge tone={CAT_TONE[art.category]||"gray"}>{art.category}</Badge>
+      <Icon name="chevronRight" size={16} style={{ color:"var(--muted)", flexShrink:0 }} />
+    </div>
+  );
+}
+
+export function Vademecum({ role, isDemo }) {
+  const canManage              = role === "admin";
+  const [articles, setArticles] = useState([]);
+  const [q, setQ]               = useState("");
+  const [cat, setCat]           = useState("All");
+  const [selected, setSelected] = useState(null);
+  const [formMode, setFormMode] = useState(null);     // "create" | "edit" | null
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm]         = useState({ title:"", category:"Guides", content:"", isPinned:false });
+  const [saving, setSaving]     = useState(false);
+
+  React.useEffect(() => {
+    if (isDemo) { setArticles(D.VADM); return; }
+    const token = localStorage.getItem("authToken");
+    fetch(`${API_URL}/api/vademecum`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setArticles(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [isDemo]);
+
+  const filtered = articles.filter(a =>
+    (cat === "All" || a.category === cat) &&
+    (q === "" || a.title.toLowerCase().includes(q.toLowerCase()) || (a.content||"").toLowerCase().includes(q.toLowerCase()))
+  );
+  const pinned   = filtered.filter(a => a.isPinned);
+  const unpinned = filtered.filter(a => !a.isPinned);
+
+  const openCreate = () => {
+    setForm({ title:"", category:"Guides", content:"", isPinned:false });
+    setEditingId(null);
+    setFormMode("create");
+    setSelected(null);
+  };
+
+  const openEdit = (art) => {
+    setForm({ title:art.title, category:art.category, content:art.content, isPinned:art.isPinned });
+    setEditingId(art._id);
+    setFormMode("edit");
+    setSelected(null);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.content.trim()) {
+      showToast("Title and content are required", "error"); return;
+    }
+    setSaving(true);
+    try {
+      if (isDemo) {
+        if (formMode === "create") {
+          const art = { _id:"V-"+Date.now(), ...form, createdBy:{ name:"Dana Whitfield", initials:"DW", color:"#2f6fdb" }, updatedAt:new Date().toISOString() };
+          setArticles(prev => [art, ...prev]);
+        } else {
+          setArticles(prev => prev.map(a => a._id === editingId ? { ...a, ...form, updatedAt:new Date().toISOString() } : a));
+        }
+        showToast(`"${form.title}" ${formMode === "create" ? "created" : "updated"}`);
+      } else {
+        const token = localStorage.getItem("authToken");
+        const url    = formMode === "create" ? `${API_URL}/api/vademecum` : `${API_URL}/api/vademecum/${editingId}`;
+        const res    = await fetch(url, { method: formMode === "create" ? "POST" : "PUT", headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` }, body: JSON.stringify(form) });
+        const data   = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed");
+        if (formMode === "create") setArticles(prev => [data, ...prev]);
+        else setArticles(prev => prev.map(a => a._id === editingId ? data : a));
+        showToast(`"${data.title}" ${formMode === "create" ? "created" : "updated"}`);
+      }
+      setFormMode(null); setEditingId(null);
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    const art = articles.find(a => a._id === id);
+    if (isDemo) {
+      setArticles(prev => prev.filter(a => a._id !== id));
+      if (selected === id) setSelected(null);
+      showToast(`"${art?.title}" deleted`); return;
+    }
+    const token = localStorage.getItem("authToken");
+    const res   = await fetch(`${API_URL}/api/vademecum/${id}`, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` } });
+    if (res.ok) {
+      setArticles(prev => prev.filter(a => a._id !== id));
+      if (selected === id) setSelected(null);
+      showToast(`"${art?.title}" deleted`);
+    }
+  };
+
+  // ── DETAIL VIEW ──────────────────────────────────────────────────────────
+  if (selected) {
+    const art = articles.find(a => a._id === selected);
+    if (!art) { setSelected(null); return null; }
+    const dateStr = art.updatedAt
+      ? new Date(art.updatedAt).toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" })
+      : "";
+    return (
+      <div className="page">
+        <div style={{ marginBottom:20 }}>
+          <Btn variant="ghost" icon="chevronLeft" sm onClick={() => setSelected(null)}>Back to Vademecum</Btn>
+        </div>
+        <Card style={{ maxWidth:720, margin:"0 auto" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginBottom:22, flexWrap:"wrap" }}>
+            <div>
+              <div style={{ display:"flex", gap:7, alignItems:"center", marginBottom:12, flexWrap:"wrap" }}>
+                {art.isPinned && <Badge tone="teal" dot>Pinned</Badge>}
+                <Badge tone={CAT_TONE[art.category]||"gray"}>{art.category}</Badge>
+              </div>
+              <div style={{ fontSize:24, fontWeight:700, lineHeight:1.3, marginBottom:8 }}>{art.title}</div>
+              <div className="muted" style={{ fontSize:14 }}>
+                {art.createdBy?.name && <span>By <strong>{art.createdBy.name}</strong>{dateStr ? " · " : ""}</span>}
+                {dateStr && <span>Updated {dateStr}</span>}
+              </div>
+            </div>
+            {canManage && (
+              <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                <Btn variant="ghost" icon="edit" sm onClick={() => openEdit(art)}>Edit</Btn>
+                <Btn variant="ghost" icon="trash" sm onClick={() => handleDelete(art._id)}>Delete</Btn>
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop:"1px solid var(--line-2)", paddingTop:24, fontSize:15.5 }}>
+            {renderMd(art.content)}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── FORM VIEW ────────────────────────────────────────────────────────────
+  if (formMode) {
+    return (
+      <div className="page">
+        <PageHead
+          title={formMode === "create" ? "New Article" : "Edit Article"}
+          sub={formMode === "create" ? "Add a new article to the vademecum" : `Editing: ${form.title || "…"}`}
+          actions={<Btn variant="ghost" icon="chevronLeft" onClick={() => { setFormMode(null); setEditingId(null); }}>Cancel</Btn>}
+        />
+        <Card style={{ maxWidth:720, margin:"0 auto" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <div style={{ gridColumn:"1 / -1" }}>
+              <label className="fieldlabel">Title *</label>
+              <input className="input" style={{ width:"100%" }} placeholder="e.g. Emergency Evacuation Protocol"
+                value={form.title} onChange={e => setForm({ ...form, title:e.target.value })} />
+            </div>
+            <div>
+              <label className="fieldlabel">Category</label>
+              <select className="input" style={{ width:"100%" }} value={form.category} onChange={e => setForm({ ...form, category:e.target.value })}>
+                {VADM_CATS.filter(c => c !== "All").map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:10, paddingTop:22 }}>
+              <input type="checkbox" id="pin-chk" checked={form.isPinned} onChange={e => setForm({ ...form, isPinned:e.target.checked })} style={{ width:16, height:16, cursor:"pointer" }} />
+              <label htmlFor="pin-chk" style={{ fontSize:14.5, cursor:"pointer" }}>Pin to top of list</label>
+            </div>
+          </div>
+          <div style={{ marginBottom:20 }}>
+            <label className="fieldlabel">Content * — Markdown supported</label>
+            <div style={{ padding:"7px 12px", background:"var(--surface-2)", borderRadius:"var(--r-md) var(--r-md) 0 0", borderBottom:"1px solid var(--line-2)", fontSize:13, color:"var(--muted)", fontFamily:"var(--mono)" }}>
+              ## Heading &nbsp;·&nbsp; **bold** &nbsp;·&nbsp; - bullet &nbsp;·&nbsp; 1. numbered
+            </div>
+            <textarea className="input" style={{ width:"100%", height:340, padding:"12px", resize:"vertical", fontFamily:"var(--mono)", fontSize:14, lineHeight:1.7, borderTopLeftRadius:0, borderTopRightRadius:0 }}
+              placeholder={"## Section Title\n\nWrite your content here.\n\n## Steps\n1. First step\n2. Second step with **bold text**\n\n- Bullet point\n- Another point"}
+              value={form.content} onChange={e => setForm({ ...form, content:e.target.value })} />
+          </div>
+          <div style={{ display:"flex", justifyContent:"flex-end", gap:10, paddingTop:14, borderTop:"1px solid var(--line-2)" }}>
+            <Btn variant="ghost" onClick={() => { setFormMode(null); setEditingId(null); }}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : formMode === "create" ? "Create Article" : "Save Changes"}
+            </Btn>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── LIST VIEW ────────────────────────────────────────────────────────────
   return (
     <div className="page">
-      <PageHead title="Vademecum" sub="Quick reference guide and procedures" />
-      <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
-        <Icon name="alphabetical" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
-        <div style={{ fontSize: 22, fontWeight:600, marginBottom:12 }}>Vademecum</div>
-        <div style={{ fontSize: 16, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
-          Quick reference guide with procedures and important information. Coming soon.
+      <PageHead
+        title="Vademecum"
+        sub={`${articles.length} article${articles.length !== 1 ? "s" : ""} · Quick reference guides & procedures`}
+        actions={canManage && <Btn variant="primary" icon="plus" onClick={openCreate}>New article</Btn>}
+      />
+
+      <div className="filterbar" style={{ marginBottom:"var(--gap)" }}>
+        <Search placeholder="Search articles…" value={q} onChange={setQ} />
+        <Select value={cat} options={VADM_CATS} onChange={setCat} />
+        <div style={{ flex:1 }} />
+        <span className="muted" style={{ fontSize:14.5 }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <Card>
+          <div style={{ textAlign:"center", padding:"48px 0", color:"var(--muted)" }}>
+            <Icon name="alphabetical" size={34} style={{ marginBottom:14, opacity:.5 }} />
+            <div style={{ fontSize:17, fontWeight:600, color:"var(--ink-2)", marginBottom:8 }}>
+              {q || cat !== "All" ? "No articles match your search" : "No articles yet"}
+            </div>
+            <div style={{ fontSize:15 }}>
+              {q || cat !== "All" ? "Try adjusting your search or filter." : canManage ? "Click \"New article\" to create the first one." : "Check back later."}
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:"var(--gap)" }}>
+          {pinned.length > 0 && (
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:"var(--muted)", letterSpacing:".07em", textTransform:"uppercase", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+                <Icon name="pin" size={12} /> Pinned
+              </div>
+              <Card flush>
+                {pinned.map(art => <VadRow key={art._id} art={art} onClick={() => setSelected(art._id)} />)}
+              </Card>
+            </div>
+          )}
+          {cat !== "All" ? (
+            unpinned.length > 0 && (
+              <Card flush>
+                {unpinned.map(art => <VadRow key={art._id} art={art} onClick={() => setSelected(art._id)} />)}
+              </Card>
+            )
+          ) : (
+            VADM_CATS.filter(c => c !== "All").map(category => {
+              const items = unpinned.filter(a => a.category === category);
+              if (items.length === 0) return null;
+              return (
+                <div key={category}>
+                  <div style={{ fontSize:12, fontWeight:700, color:"var(--muted)", letterSpacing:".07em", textTransform:"uppercase", marginBottom:10 }}>
+                    {category}
+                  </div>
+                  <Card flush>
+                    {items.map(art => <VadRow key={art._id} art={art} onClick={() => setSelected(art._id)} />)}
+                  </Card>
+                </div>
+              );
+            })
+          )}
         </div>
-        <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
-      </Card>
+      )}
     </div>
   );
 }

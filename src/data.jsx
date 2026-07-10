@@ -287,6 +287,64 @@ export const THREADS = [
     msgs:[["E-101","Great work on the migration plan.","10:05"]] },
 ];
 
+// Vademecum Articles
+export const VADM = [
+  {
+    _id: "V-01",
+    title: "Emergency Evacuation Protocol",
+    category: "Emergency",
+    isPinned: true,
+    content: "## Overview\nIn case of fire or emergency requiring immediate evacuation, follow these steps without delay.\n\n## Steps\n1. Stop work immediately — do **not** wait to save files.\n2. Exit via the nearest marked fire escape. **Do NOT use the elevator.**\n3. Proceed to the assembly point: **East Parking Lot, Zone B**.\n4. Wait for headcount from your department lead.\n5. Do not re-enter the building until an official all-clear is given.\n\n## Emergency Contacts\n- Building Security: **ext. 5500**\n- HR — Hannah Berg: **ext. 1110**\n- First Aid Station: Level 1, near main entrance",
+    createdBy: { name: "Dana Whitfield", initials: "DW", color: "#2f6fdb" },
+    updatedAt: "2026-06-01T10:00:00Z",
+  },
+  {
+    _id: "V-02",
+    title: "Onboarding Checklist",
+    category: "Procedures",
+    isPinned: true,
+    content: "## Day 1\n- Collect equipment from IT (Room 204)\n- Set up company email, Slack, and 2FA on all accounts\n- Complete the mandatory security awareness training\n- Meet your team lead and onboarding buddy\n\n## Week 1\n- Complete all HR documentation with People Ops\n- Review your department OKRs and roadmap\n- Shadow at least 3 team meetings\n- Schedule your first 1:1 with your direct manager\n\n## First Month\n- Deliver your first project milestone\n- Attend the monthly all-hands meeting\n- Submit your 30-day check-in form to HR",
+    createdBy: { name: "Hannah Berg", initials: "HB", color: "#15935f" },
+    updatedAt: "2026-04-15T08:30:00Z",
+  },
+  {
+    _id: "V-03",
+    title: "Remote Work Policy",
+    category: "Policies",
+    isPinned: false,
+    content: "## Eligibility\nAll permanent employees in eligible roles may work remotely up to **3 days per week**. Employees in their first 90 days must be on-site full time.\n\n## Requirements\n- Stable internet connection (minimum 25 Mbps download)\n- A dedicated, quiet, distraction-free workspace\n- Availability during core hours: **10:00–16:00 local time**\n- Camera on during all team meetings\n\n## Process\n1. Coordinate remote days with your team lead at least **one day in advance**.\n2. Log your location in the Attendance tracker each morning by 9:30 AM.\n3. Notify your manager immediately if you need to go offline unexpectedly.",
+    createdBy: { name: "Hannah Berg", initials: "HB", color: "#15935f" },
+    updatedAt: "2026-05-20T09:00:00Z",
+  },
+  {
+    _id: "V-04",
+    title: "Data Security & Privacy",
+    category: "Policies",
+    isPinned: false,
+    content: "## Passwords\n- Minimum **12 characters** — mix of uppercase, lowercase, numbers, and symbols.\n- Use the company-approved password manager. Never reuse passwords across accounts.\n- Enable **two-factor authentication** on every company tool.\n\n## Data Handling\n- Never share customer or employee data outside approved channels.\n- Do not store sensitive data on personal devices or unencrypted drives.\n- Encrypt all files containing PII before sending via email.\n\n## Incident Reporting\nIf you suspect a security incident or data breach, **contact security@workcentral.io immediately** and notify your manager. Do not attempt to investigate alone — escalate right away.",
+    createdBy: { name: "Felix Wagner", initials: "FW", color: "#0ea5b7" },
+    updatedAt: "2026-01-15T09:00:00Z",
+  },
+  {
+    _id: "V-05",
+    title: "Code Review Guidelines",
+    category: "Guides",
+    isPinned: false,
+    content: "## Philosophy\nCode reviews exist to **improve the codebase** and share knowledge — not to gatekeep or assign blame. Be kind, be specific, and assume good intent in every comment.\n\n## For Reviewers\n- Review within **24 hours** of being assigned.\n- Be specific and constructive. \"This could be cleaner\" is not actionable.\n- Clearly distinguish blocking issues from non-blocking suggestions (use labels: **[blocking]**, **[nit]**).\n- Approve when the code meets the bar — perfect is the enemy of shipped.\n\n## For Authors\n- Keep PRs under **400 lines** when possible. Smaller PRs get faster, higher-quality reviews.\n- Write a clear description of **what** changed and **why**.\n- Respond to every comment, even with just \"Done\" or \"Won't fix — see comment\".",
+    createdBy: { name: "Elena Petrova", initials: "EP", color: "#6d54d6" },
+    updatedAt: "2026-03-10T14:00:00Z",
+  },
+  {
+    _id: "V-06",
+    title: "Expense Reimbursement",
+    category: "Procedures",
+    isPinned: false,
+    content: "## Eligible Expenses\n- Business travel (flights, hotels, ground transport)\n- Client entertainment — pre-approved, maximum **$150 per person**\n- Home office equipment — requires prior manager approval\n- Work-related software under **$50/month** (attach receipt)\n\n## How to Submit\n1. Save all receipts — digital preferred (PDF or clear photo).\n2. Submit via the Finance portal within **30 calendar days** of the expense.\n3. Include a project code and brief purpose note for each line item.\n4. Expenses over **$200** require written manager approval before submission.\n\n## Timeline\nReimbursements are processed on the **15th and last working day** of each month. Allow up to 5 business days for payment to appear.",
+    createdBy: { name: "Lukas Novak", initials: "LN", color: "#b3543f" },
+    updatedAt: "2026-02-28T11:00:00Z",
+  },
+];
+
 // Multi-tenancy utilities
 export function generateCompanyId() {
   const year = new Date().getFullYear();
