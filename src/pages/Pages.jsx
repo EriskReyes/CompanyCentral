@@ -1978,18 +1978,313 @@ export function Attendance({ access }) {
 }
 
 // ========== DIENSTPLAN ==========
-export function Dienstplan({ onNavigate }) {
+const DE_MONTHS    = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DE_DAYS      = ['So','Mo','Di','Mi','Do','Fr','Sa']; // 0 = Sonntag
+const STATUS_CFG   = {
+  work:     { icon: 'check',    color: 'var(--accent)',  bg: 'var(--accent-soft)',  label: 'Working'  },
+  vacation: { icon: 'sun',      color: '#c2790a',        bg: '#fbf0db',             label: 'Vacation' },
+  sick:     { icon: 'zap',      color: '#d4453e',        bg: '#fbe7e6',             label: 'Sick'     },
+  free:     { icon: 'moon',     color: '#6b7a8d',        bg: 'var(--surface-2)',    label: 'Free'     },
+};
+const WORK_TYPES_DEMO = ['Frontend dev','Backend work','Design review','Sprint planning','Client call','Code review','On-site'];
+
+function daysInMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+function dowOf(ym, d) {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, d).getDay(); // 0=Sun
+}
+function toDateStr(ym, d) {
+  return `${ym}-${String(d).padStart(2, '0')}`;
+}
+function entryKey(userId, date) { return `${userId}_${date}`; }
+
+export function Dienstplan({ role, isDemo }) {
+  const canManage = role === 'admin';
+
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [users,   setUsers]   = useState([]);
+  const [entries, setEntries] = useState({});
+  const [modal,   setModal]   = useState(null); // { userId, date, userName } | null
+  const [form,    setForm]    = useState({ status: 'work', workType: '', notes: '' });
+  const [saving,  setSaving]  = useState(false);
+
+  React.useEffect(() => {
+    if (isDemo) {
+      const demoUsers = D.EMP.map(e => ({ _id: e.id, name: e.name, initials: e.initials, color: e.color, role: e.role }));
+      setUsers(demoUsers);
+      const total = daysInMonth(month);
+      const [y, m] = month.split('-').map(Number);
+      const map = {};
+      D.EMP.forEach((emp, ei) => {
+        for (let d = 1; d <= total; d++) {
+          const dow = new Date(y, m - 1, d).getDay();
+          if (dow === 0 || dow === 6) continue;
+          const hash = (ei * 31 + d * 7 + m) % 10;
+          const status = hash < 7 ? 'work' : hash === 7 ? 'vacation' : hash === 8 ? 'sick' : 'free';
+          const date   = toDateStr(month, d);
+          map[entryKey(emp.id, date)] = { _id: entryKey(emp.id, date), userId: emp.id, date, status, workType: status === 'work' ? WORK_TYPES_DEMO[(ei + d) % WORK_TYPES_DEMO.length] : '', notes: '' };
+        }
+      });
+      setEntries(map);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    fetch(`${API_URL}/api/dienstplan?month=${month}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { entries: [], users: [] })
+      .then(({ entries: raw, users: rawU }) => {
+        setUsers(rawU);
+        const map = {};
+        raw.forEach(e => { map[entryKey(e.userId, e.date)] = e; });
+        setEntries(map);
+      })
+      .catch(() => {});
+  }, [month, isDemo]);
+
+  const [y, mn] = month.split('-').map(Number);
+  const totalDays  = daysInMonth(month);
+  const days       = Array.from({ length: totalDays }, (_, i) => i + 1);
+  const monthLabel = `${DE_MONTHS[mn - 1]} ${y}`;
+  const todayStr   = toDateStr(`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`, new Date().getDate());
+
+  const prevMonth = () => {
+    const d = new Date(y, mn - 2, 1);
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+  const nextMonth = () => {
+    const d = new Date(y, mn, 1);
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const openModal = (user, date) => {
+    if (!canManage) return;
+    const entry = entries[entryKey(user._id, date)];
+    setForm({ status: entry?.status || 'work', workType: entry?.workType || '', notes: entry?.notes || '' });
+    setModal({ userId: user._id, date, userName: user.name, entry: entry || null });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (isDemo) {
+        const key = entryKey(modal.userId, modal.date);
+        setEntries(prev => ({ ...prev, [key]: { _id: key, userId: modal.userId, date: modal.date, ...form } }));
+        setModal(null);
+        return;
+      }
+      const token = localStorage.getItem('authToken');
+      const res   = await fetch(`${API_URL}/api/dienstplan`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ userId: modal.userId, date: modal.date, ...form }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const key = entryKey(data.userId, data.date);
+      setEntries(prev => ({ ...prev, [key]: data }));
+      setModal(null);
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (isDemo) {
+      const key = entryKey(modal.userId, modal.date);
+      setEntries(prev => { const n = { ...prev }; delete n[key]; return n; });
+      setModal(null);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    const res   = await fetch(`${API_URL}/api/dienstplan?userId=${modal.userId}&date=${modal.date}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const key = entryKey(modal.userId, modal.date);
+      setEntries(prev => { const n = { ...prev }; delete n[key]; return n; });
+      setModal(null);
+    }
+  };
+
+  const [dateFmt] = useState(() => new Intl.DateTimeFormat('de-DE', { weekday:'long', day:'numeric', month:'long' }));
+  const formatDateLabel = (dateStr) => {
+    const [dy, dm, dd] = dateStr.split('-').map(Number);
+    return dateFmt.format(new Date(dy, dm - 1, dd));
+  };
+
+  const CELL_W = 38; // px — ancho fijo por columna de día
+
   return (
     <div className="page">
-      <PageHead title="Dienstplan" sub="Work schedule and shift planning" />
-      <Card style={{ maxWidth:600, margin:"40px auto", textAlign:"center", padding:"60px 40px" }}>
-        <Icon name="schedule" size={44} style={{ color:"var(--accent)", marginBottom:20 }} />
-        <div style={{ fontSize: 22, fontWeight:600, marginBottom:12 }}>Dienstplan</div>
-        <div style={{ fontSize: 16, color:"var(--ink-2)", lineHeight:1.6, marginBottom:32 }}>
-          Manage team work schedules, shifts, and planning. Coming soon.
+      <PageHead
+        title="Dienstplan"
+        sub={`${users.length} Mitarbeiter · ${monthLabel}`}
+        actions={
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <Btn variant="ghost" icon="chevronLeft" sm onClick={prevMonth} />
+            <span style={{ fontSize:15, fontWeight:600, minWidth:130, textAlign:'center' }}>{monthLabel}</span>
+            <Btn variant="ghost" icon="chevronRight" sm onClick={nextMonth} />
+          </div>
+        }
+      />
+
+      {/* ── Tabla / Grid ───────────────────────────────────────────────────── */}
+      <div style={{ overflowX:'auto', border:'1px solid var(--line)', borderRadius:'var(--r-lg)', background:'var(--surface)' }}>
+        <table style={{ borderCollapse:'collapse', minWidth:'100%' }}>
+          <colgroup>
+            <col style={{ width:170, minWidth:170 }} />
+            {days.map(d => <col key={d} style={{ width:CELL_W, minWidth:CELL_W }} />)}
+          </colgroup>
+
+          {/* ── Cabecera con días ──────────────────────────────────────────── */}
+          <thead>
+            <tr>
+              <th style={{ position:'sticky', left:0, top:0, zIndex:4, background:'var(--surface)', padding:'10px 14px', textAlign:'left', fontWeight:600, fontSize:13.5, borderBottom:'1px solid var(--line)', whiteSpace:'nowrap' }}>
+                Mitarbeiter
+              </th>
+              {days.map(d => {
+                const dow    = dowOf(month, d);
+                const isWknd = dow === 0 || dow === 6;
+                const dateS  = toDateStr(month, d);
+                const isToday = dateS === todayStr;
+                return (
+                  <th key={d} style={{ position:'sticky', top:0, zIndex:3, background: isToday ? 'var(--accent-soft)' : isWknd ? 'var(--surface-2)' : 'var(--surface)', borderBottom:'1px solid var(--line)', borderLeft:'1px solid var(--line-2)', padding:'6px 2px', textAlign:'center', fontSize:12 }}>
+                    <div style={{ fontWeight:700, color: isToday ? 'var(--accent-ink)' : isWknd ? 'var(--muted)' : 'var(--ink)' }}>{d}</div>
+                    <div style={{ color:'var(--muted)', fontSize:11, marginTop:1 }}>{DE_DAYS[dow]}</div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+
+          {/* ── Filas por empleado ─────────────────────────────────────────── */}
+          <tbody>
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={totalDays + 1} style={{ textAlign:'center', padding:'40px 0', color:'var(--muted)', fontSize:15 }}>
+                  No employees found for this workspace.
+                </td>
+              </tr>
+            )}
+            {users.map((user, ui) => (
+              <tr key={user._id} style={{ borderTop:'1px solid var(--line-2)' }}>
+                {/* Nombre del empleado — columna fija */}
+                <td style={{ position:'sticky', left:0, zIndex:1, background:'var(--surface)', padding:'6px 14px', whiteSpace:'nowrap', borderRight:'1px solid var(--line)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                    <div style={{ width:26, height:26, borderRadius:99, background:user.color||'#6b7a8d', color:'#fff', fontSize:11, fontWeight:700, display:'grid', placeItems:'center', flexShrink:0 }}>
+                      {user.initials||'?'}
+                    </div>
+                    <span style={{ fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', maxWidth:110 }}>{user.name}</span>
+                  </div>
+                </td>
+
+                {/* Celda por día */}
+                {days.map(d => {
+                  const dateS  = toDateStr(month, d);
+                  const dow    = dowOf(month, d);
+                  const isWknd = dow === 0 || dow === 6;
+                  const isToday = dateS === todayStr;
+                  const entry  = entries[entryKey(user._id, dateS)];
+                  const cfg    = entry ? STATUS_CFG[entry.status] : null;
+                  return (
+                    <td key={d}
+                      onClick={() => openModal(user, dateS)}
+                      title={entry?.status === 'work' && entry.workType ? entry.workType : undefined}
+                      style={{ textAlign:'center', borderLeft:'1px solid var(--line-2)', padding:'3px 1px', cursor: canManage ? 'pointer' : 'default', background: isToday ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : isWknd ? 'var(--surface-2)' : undefined, transition:'background .1s' }}>
+                      {cfg && (
+                        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:30, borderRadius:6, margin:'1px', background: cfg.bg }}>
+                          <Icon name={cfg.icon} size={13} style={{ color:cfg.color }} />
+                        </div>
+                      )}
+                      {!cfg && canManage && (
+                        <div style={{ height:30, display:'flex', justifyContent:'center', alignItems:'center', opacity:0 }} className="cell-add-hint">
+                          <Icon name="plus" size={12} style={{ color:'var(--muted)' }} />
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Leyenda ────────────────────────────────────────────────────────── */}
+      <div style={{ display:'flex', gap:20, flexWrap:'wrap', padding:'12px 16px', background:'var(--surface-2)', borderRadius:'var(--r-lg)', border:'1px solid var(--line)', marginTop:'var(--gap)', alignItems:'center' }}>
+        {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+          <div key={key} style={{ display:'flex', alignItems:'center', gap:6, fontSize:14 }}>
+            <div style={{ width:22, height:22, borderRadius:5, background:cfg.bg, display:'grid', placeItems:'center' }}>
+              <Icon name={cfg.icon} size={12} style={{ color:cfg.color }} />
+            </div>
+            <span style={{ color:'var(--ink-2)' }}>{cfg.label}</span>
+          </div>
+        ))}
+        <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:14 }}>
+          <div style={{ width:22, height:22, borderRadius:5, background:'var(--surface-2)', border:'1px solid var(--line)' }} />
+          <span style={{ color:'var(--muted)' }}>Weekend</span>
         </div>
-        <Btn variant="primary" onClick={() => onNavigate("dashboard")}>Back to Dashboard</Btn>
-      </Card>
+        {!canManage && (
+          <span style={{ marginLeft:'auto', fontSize:13, color:'var(--muted)' }}>Read-only view</span>
+        )}
+      </div>
+
+      {/* ── Modal de edición ───────────────────────────────────────────────── */}
+      {modal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}
+          onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div style={{ background:'var(--surface)', borderRadius:'var(--r-lg)', padding:24, minWidth:360, maxWidth:440, border:'1px solid var(--line)', boxShadow:'0 20px 60px rgba(0,0,0,.4)' }}>
+            <div style={{ fontSize:17, fontWeight:700, marginBottom:4 }}>Schicht bearbeiten</div>
+            <div className="muted" style={{ fontSize:14, marginBottom:20 }}>
+              {modal.userName} · {formatDateLabel(modal.date)}
+            </div>
+
+            <label className="fieldlabel" style={{ display:'block', marginBottom:8 }}>Status</label>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
+              {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+                <button key={key} type="button"
+                  onClick={() => setForm({ ...form, status: key })}
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', background: form.status === key ? cfg.bg : 'var(--surface-2)', border:`1.5px solid ${form.status === key ? cfg.color : 'transparent'}`, borderRadius:'var(--r-md)', cursor:'pointer', fontSize:14, fontWeight: form.status === key ? 700 : 500, color: form.status === key ? cfg.color : 'var(--ink-2)', transition:'all .15s' }}>
+                  <Icon name={cfg.icon} size={15} style={{ color:cfg.color }} />
+                  {cfg.label}
+                </button>
+              ))}
+            </div>
+
+            {form.status === 'work' && (
+              <div style={{ marginBottom:14 }}>
+                <label className="fieldlabel">Arbeitstyp</label>
+                <input className="input" style={{ width:'100%' }} placeholder="z. B. Frontend-Entwicklung"
+                  value={form.workType} onChange={e => setForm({ ...form, workType:e.target.value })} />
+              </div>
+            )}
+
+            <div style={{ marginBottom:22 }}>
+              <label className="fieldlabel">Notizen (optional)</label>
+              <input className="input" style={{ width:'100%' }} placeholder="Weitere Hinweise…"
+                value={form.notes} onChange={e => setForm({ ...form, notes:e.target.value })} />
+            </div>
+
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end', alignItems:'center' }}>
+              {modal.entry && (
+                <Btn variant="ghost" icon="trash" sm onClick={handleDelete}>Löschen</Btn>
+              )}
+              <div style={{ flex:1 }} />
+              <Btn variant="ghost" onClick={() => setModal(null)}>Abbrechen</Btn>
+              <Btn variant="primary" onClick={handleSave} disabled={saving}>
+                {saving ? 'Speichern…' : 'Speichern'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
