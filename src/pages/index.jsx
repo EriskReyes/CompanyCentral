@@ -1,3 +1,4 @@
+import React from 'react';
 import Dashboard from './Dashboard';
 import { Icon } from '../icons';
 import { Btn } from '../ui';
