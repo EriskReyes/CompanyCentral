@@ -786,85 +786,399 @@ export function Documents({ isDemo }) {
 }
 
 // ========== FILES ==========
-export function Files({ access, isDemo }) {
-  const [folders, setFolders] = useState([
-    { name:"Engineering", count:48, color:"#2f6fdb" }, { name:"Design Assets", count:126, color:"#0d7d7d" },
-    { name:"Product Specs", count:31, color:"#6d54d6" }, { name:"People & HR", count:22, color:"#15935f" },
-    { name:"Brand & Marketing", count:64, color:"#c2790a" }, { name:"Contracts", count:18, color:"#b3543f" },
-  ]);
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
+const FOLDER_PALETTE = ['#2f6fdb','#0d7d7d','#6d54d6','#15935f','#c2790a','#b3543f','#0ea5b7','#d4453e'];
+const DEMO_FOLDERS   = [
+  { _id:'F-01', name:'Engineering',      color:'#2f6fdb', fileCount:48 },
+  { _id:'F-02', name:'Design Assets',    color:'#0d7d7d', fileCount:12 },
+  { _id:'F-03', name:'Product Specs',    color:'#6d54d6', fileCount:31 },
+  { _id:'F-04', name:'People & HR',      color:'#15935f', fileCount:22 },
+  { _id:'F-05', name:'Brand & Marketing',color:'#c2790a', fileCount:8  },
+  { _id:'F-06', name:'Contracts',        color:'#b3543f', fileCount:6  },
+];
+
+function mimeToKind(mime) {
+  if (!mime) return 'FILE';
+  if (mime === 'application/pdf') return 'PDF';
+  if (mime.includes('word') || mime.includes('document') || mime === 'text/plain' || mime === 'text/markdown') return 'DOC';
+  if (mime.includes('sheet') || mime.includes('excel') || mime === 'text/csv') return 'SHEET';
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar') || mime.includes('gzip')) return 'ZIP';
+  if (mime.startsWith('image/')) return 'IMG';
+  return 'FILE';
+}
+
+function formatBytes(b) {
+  if (!b) return '—';
+  const u = ['B','KB','MB','GB'];
+  let i = 0; let n = b;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return `${parseFloat(n.toFixed(1))} ${u[i]}`;
+}
+
+function fileRelTime(iso) {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'Just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'Yesterday';
+  if (d < 7)  return `${d}d ago`;
+  return new Date(iso).toLocaleDateString('de-DE', { day:'2-digit', month:'short' });
+}
+
+const KIND_COLORS = {
+  ...D.DOC_COLORS,
+  IMG:  ['#e6f0fb','#235ab3'],
+  TXT:  ['#f0f1f3','#475569'],
+  FILE: ['#f0f1f3','#475569'],
+};
+
+export function Files({ role, access, isDemo }) {
+  const canManage = role === 'admin' || access === 'full';
+
+  const [folders,        setFolders]        = useState([]);
+  const [rootCount,      setRootCount]      = useState(0);
+  const [files,          setFiles]          = useState([]);
+  const [activeFolderId, setActiveFolderId] = useState(null); // null = all, 'root' = no folder, string = folder _id
+  const [uploading,      setUploading]      = useState(false);
+  const [showNewFolder,  setShowNewFolder]  = useState(false);
+  const [newFolderName,  setNewFolderName]  = useState('');
+  const [search,         setSearch]         = useState('');
   const uploadRef = useRef(null);
 
-  const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
-    setFolders([...folders, { name: newFolderName.trim(), count: 0, color: "#6b7a8d" }]);
-    showToast(`Folder "${newFolderName.trim()}" created`);
-    setNewFolderName("");
-    setShowNewFolder(false);
-  };
+  // ── Carga carpetas ──────────────────────────────────────────────────────────
+  const loadFolders = React.useCallback(() => {
+    if (isDemo) { setFolders(DEMO_FOLDERS); setRootCount(D.DOCS.length); return; }
+    const token = localStorage.getItem('authToken');
+    fetch(`${API_URL}/api/files/folders`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { folders: [], rootCount: 0 })
+      .then(({ folders: f, rootCount: rc }) => { setFolders(f); setRootCount(rc); })
+      .catch(() => {});
+  }, [isDemo]);
 
-  const handleDownload = (doc) => {
-    const content = "Contenido de prueba para el archivo: " + doc.name;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = doc.name.replace(/\s+/g, '_') + '.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  // ── Carga archivos ──────────────────────────────────────────────────────────
+  const loadFiles = React.useCallback(() => {
+    if (isDemo) {
+      const demoFiles = D.DOCS.map(d => ({
+        _id: d.id, name: d.name, kind: d.kind,
+        sizeStr: d.size, ownerName: D.empById[d.owner]?.name?.split(' ')[0] || '—',
+        updatedStr: d.updated, folderId: null,
+      }));
+      const filtered = activeFolderId === 'root' || activeFolderId === null ? demoFiles : [];
+      setFiles(filtered);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    const qs    = activeFolderId ? `?folderId=${activeFolderId}` : '';
+    fetch(`${API_URL}/api/files${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(raw => setFiles(raw.map(f => ({
+        _id: f._id, name: f.name, kind: mimeToKind(f.mimetype),
+        sizeStr: formatBytes(f.size), ownerName: f.uploadedBy?.name?.split(' ')[0] || '—',
+        updatedStr: fileRelTime(f.createdAt), folderId: f.folderId,
+        mimetype: f.mimetype,
+      }))))
+      .catch(() => {});
+  }, [activeFolderId, isDemo]);
 
-  const handleView = (doc) => {
-    alert(`👁️ Viendo archivo:\n\nNombre: ${doc.name}\nTipo: ${doc.kind}\nTamaño: ${doc.size}\n\n(Vista previa de prueba)`);
-  };
+  React.useEffect(() => { loadFolders(); }, [loadFolders]);
+  React.useEffect(() => { loadFiles();   }, [loadFiles]);
 
-  const handleUpload = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const fileNames = Array.from(e.target.files).map(f => f.name).join(", ");
-      showToast(`Successfully uploaded: ${fileNames}`);
-      e.target.value = null; // reset
+  // ── Crear carpeta ───────────────────────────────────────────────────────────
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    if (isDemo) {
+      const color = FOLDER_PALETTE[folders.length % FOLDER_PALETTE.length];
+      setFolders(prev => [...prev, { _id: `F-${Date.now()}`, name, color, fileCount: 0 }]);
+      showToast(`Folder "${name}" created`);
+      setNewFolderName(''); setShowNewFolder(false);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    const color = FOLDER_PALETTE[folders.length % FOLDER_PALETTE.length];
+    const res   = await fetch(`${API_URL}/api/files/folders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name, color }),
+    });
+    if (res.ok) {
+      showToast(`Folder "${name}" created`);
+      setNewFolderName(''); setShowNewFolder(false);
+      loadFolders();
+    } else {
+      const d = await res.json();
+      showToast(d.error || 'Failed to create folder', 'error');
     }
   };
 
+  // ── Eliminar carpeta ────────────────────────────────────────────────────────
+  const handleDeleteFolder = async (folder) => {
+    if (!window.confirm(`Delete folder "${folder.name}" and all its files?`)) return;
+    if (isDemo) {
+      setFolders(prev => prev.filter(f => f._id !== folder._id));
+      if (activeFolderId === folder._id) setActiveFolderId(null);
+      showToast(`Folder "${folder.name}" deleted`);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    const res   = await fetch(`${API_URL}/api/files/folders/${folder._id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      showToast(`Folder "${folder.name}" deleted`);
+      if (activeFolderId === folder._id) setActiveFolderId(null);
+      loadFolders(); loadFiles();
+    } else {
+      showToast('Failed to delete folder', 'error');
+    }
+  };
+
+  // ── Subir archivos ──────────────────────────────────────────────────────────
+  const handleUpload = async (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = null;
+    if (!picked.length) return;
+
+    if (isDemo) {
+      const newFiles = picked.map(f => ({
+        _id: `demo-${Date.now()}-${Math.random()}`, name: f.name,
+        kind: mimeToKind(f.type), sizeStr: formatBytes(f.size),
+        ownerName: 'You', updatedStr: 'Just now', folderId: activeFolderId,
+      }));
+      setFiles(prev => [...newFiles, ...prev]);
+      showToast(`Uploaded ${picked.length} file${picked.length > 1 ? 's' : ''}`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const form  = new FormData();
+      picked.forEach(f => form.append('files', f));
+      if (activeFolderId && activeFolderId !== 'root') form.append('folderId', activeFolderId);
+
+      const res  = await fetch(`${API_URL}/api/files`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      showToast(`Uploaded ${picked.length} file${picked.length > 1 ? 's' : ''}`);
+      loadFiles(); loadFolders();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ── Descargar archivo ───────────────────────────────────────────────────────
+  const handleDownload = (file) => {
+    if (isDemo) {
+      const blob = new Blob([`Demo content for: ${file.name}`], { type: 'text/plain' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = file.name;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    // Descarga via fetch para poder enviar el header de autenticación
+    fetch(`${API_URL}/api/files/${file._id}/download`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => {
+        if (!blob) return showToast('Download failed', 'error');
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href = url; a.download = file.name;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+      })
+      .catch(() => showToast('Download failed', 'error'));
+  };
+
+  // ── Previsualizar archivo ───────────────────────────────────────────────────
+  const handleView = (file) => {
+    if (isDemo) { showToast(`Preview not available in demo mode`); return; }
+    const token = localStorage.getItem('authToken');
+    fetch(`${API_URL}/api/files/${file._id}/download?inline=true`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => {
+        if (!blob) return showToast('Preview failed', 'error');
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      })
+      .catch(() => showToast('Preview failed', 'error'));
+  };
+
+  // ── Eliminar archivo ────────────────────────────────────────────────────────
+  const handleDeleteFile = async (file) => {
+    if (!window.confirm(`Delete "${file.name}"?`)) return;
+    if (isDemo) {
+      setFiles(prev => prev.filter(f => f._id !== file._id));
+      showToast(`"${file.name}" deleted`);
+      return;
+    }
+    const token = localStorage.getItem('authToken');
+    const res   = await fetch(`${API_URL}/api/files/${file._id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) { showToast(`"${file.name}" deleted`); loadFiles(); loadFolders(); }
+    else showToast('Failed to delete file', 'error');
+  };
+
+  // ── Derivados ───────────────────────────────────────────────────────────────
+  const activeFolder  = folders.find(f => f._id === activeFolderId) || null;
+  const totalFiles    = folders.reduce((s, f) => s + (f.fileCount || 0), 0) + rootCount;
+  const filteredFiles = search.trim()
+    ? files.filter(f => f.name.toLowerCase().includes(search.toLowerCase()))
+    : files;
+
+  const fileListTitle = activeFolderId === null
+    ? 'All files'
+    : activeFolderId === 'root'
+      ? 'Files without folder'
+      : `Files in "${activeFolder?.name || ''}"`;
+
   return (
     <div className="page">
-      <PageHead title="Files" sub="Shared company file storage · 2.4 GB of 10 GB used"
-        actions={access === "full" ? <>
-          <Btn variant="ghost" icon="folder" onClick={() => setShowNewFolder(!showNewFolder)}>New folder</Btn>
-          <input type="file" multiple ref={uploadRef} style={{ display: "none" }} onChange={handleUpload} />
-          <Btn variant="primary" icon="upload" onClick={() => uploadRef.current?.click()}>Upload</Btn>
-        </> : <Badge tone="gray" dot>Read-only</Badge>} />
+      <PageHead
+        title="Files"
+        sub={`${totalFiles} files across ${folders.length} folder${folders.length !== 1 ? 's' : ''}`}
+        actions={canManage ? (
+          <div style={{ display:'flex', gap:8 }}>
+            <Btn variant="ghost" icon="folder" onClick={() => setShowNewFolder(v => !v)}>New folder</Btn>
+            <input type="file" multiple ref={uploadRef} style={{ display:'none' }} onChange={handleUpload} />
+            <Btn variant="primary" icon="upload" onClick={() => uploadRef.current?.click()} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Upload'}
+            </Btn>
+          </div>
+        ) : (
+          <Badge tone="gray" dot>Read-only</Badge>
+        )}
+      />
 
+      {/* ── Nueva carpeta ──────────────────────────────────────────────────── */}
       {showNewFolder && (
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16, padding: "12px 16px", background: "var(--surface-2)", borderRadius: "var(--r-lg)", border: "1px solid var(--line)" }}>
-          <input className="input" style={{ flex: 1 }} placeholder="Folder name…" value={newFolderName} onChange={e => setNewFolderName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleCreateFolder(); }} autoFocus />
-          <Btn variant="ghost" onClick={() => setShowNewFolder(false)}>Cancel</Btn>
+        <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:16, padding:'12px 16px', background:'var(--surface-2)', borderRadius:'var(--r-lg)', border:'1px solid var(--line)' }}>
+          <input className="input" style={{ flex:1 }} placeholder="Folder name…"
+            value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCreateFolder()} autoFocus />
+          <Btn variant="ghost" onClick={() => { setShowNewFolder(false); setNewFolderName(''); }}>Cancel</Btn>
           <Btn variant="primary" onClick={handleCreateFolder}>Create</Btn>
         </div>
       )}
 
-      <div className="ch-title" style={{ fontSize: 15, fontWeight:600, marginBottom:12, color:"var(--ink-2)" }}>Folders</div>
-      <div className="grid cols-3" style={{ marginBottom:"calc(var(--gap) + 6px)" }}>
+      {/* ── Carpetas ───────────────────────────────────────────────────────── */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+        <div style={{ fontSize:15, fontWeight:600, color:'var(--ink-2)' }}>Folders</div>
+        {activeFolderId && (
+          <button type="button" onClick={() => setActiveFolderId(null)}
+            style={{ fontSize:13, color:'var(--accent)', fontWeight:600, background:'none', border:'none', cursor:'pointer', padding:'2px 6px' }}>
+            ← All files
+          </button>
+        )}
+      </div>
+
+      <div className="grid cols-3" style={{ marginBottom:'calc(var(--gap) + 6px)' }}>
+        {/* Tarjeta "Sin carpeta" */}
+        <div className="card"
+          onClick={() => setActiveFolderId(activeFolderId === 'root' ? null : 'root')}
+          style={{ padding:16, display:'flex', alignItems:'center', gap:13, cursor:'pointer', border: activeFolderId === 'root' ? '1.5px solid var(--accent)' : undefined }}>
+          <div className="tile-ico" style={{ background:'var(--surface-2)', color:'var(--muted)', width:44, height:44 }}>
+            <Icon name="files" size={22} />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:600, fontSize:15 }}>Uncategorized</div>
+            <div className="muted" style={{ fontSize:13 }}>{rootCount} files</div>
+          </div>
+          <Icon name="chevronRight" size={18} style={{ color:'var(--muted)' }} />
+        </div>
+
         {folders.map(f => (
-          <div className="card" key={f.name} style={{ padding:16, display:"flex", alignItems:"center", gap:13, cursor:"pointer" }}>
-            <div className="tile-ico" style={{ background:f.color+"1a", color:f.color, width:44, height:44 }}><Icon name="folder" size={22} /></div>
-            <div style={{ flex:1 }}><div style={{ fontWeight:600, fontSize: 16 }}>{f.name}</div><div className="muted" style={{ fontSize: 14 }}>{f.count} files</div></div>
-            <Icon name="chevronRight" size={18} style={{ color:"var(--muted)" }} />
+          <div className="card" key={f._id}
+            onClick={() => setActiveFolderId(activeFolderId === f._id ? null : f._id)}
+            style={{ padding:16, display:'flex', alignItems:'center', gap:13, cursor:'pointer', border: activeFolderId === f._id ? `1.5px solid ${f.color}` : undefined, position:'relative' }}>
+            <div className="tile-ico" style={{ background: f.color + '1a', color: f.color, width:44, height:44 }}>
+              <Icon name="folder" size={22} />
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:600, fontSize:15 }}>{f.name}</div>
+              <div className="muted" style={{ fontSize:13 }}>{f.fileCount ?? 0} files</div>
+            </div>
+            <Icon name="chevronRight" size={18} style={{ color:'var(--muted)' }} />
+            {canManage && (
+              <button type="button"
+                onClick={e => { e.stopPropagation(); handleDeleteFolder(f); }}
+                style={{ position:'absolute', top:8, right:8, background:'none', border:'none', cursor:'pointer', padding:4, color:'var(--muted)', opacity:.6 }}
+                title="Delete folder">
+                <Icon name="trash" size={13} />
+              </button>
+            )}
           </div>
         ))}
       </div>
-      <Card title="Recent files" flush>
+
+      {/* ── Lista de archivos ──────────────────────────────────────────────── */}
+      <Card flush>
+        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 20px', borderBottom:'1px solid var(--line)' }}>
+          <span style={{ fontWeight:600, fontSize:15, flex:1 }}>
+            {fileListTitle}
+            {filteredFiles.length > 0 && <span className="muted" style={{ fontWeight:400, fontSize:13, marginLeft:8 }}>{filteredFiles.length} files</span>}
+          </span>
+          <input className="input" placeholder="Search files…" style={{ width:200 }}
+            value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
         <table className="table">
-          <thead><tr><th>Name</th><th>Owner</th><th>Modified</th><th>Size</th><th style={{ textAlign:"right" }}>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Uploaded by</th>
+              <th>Date</th>
+              <th>Size</th>
+              <th style={{ textAlign:'right' }}>Actions</th>
+            </tr>
+          </thead>
           <tbody>
-            {(isDemo ? D.DOCS.slice(0,6) : []).map(d => {
-              const [bg, fg] = D.DOC_COLORS[d.kind] || ["#eef1f4","#475569"];
-              return <tr key={d.id} className="clickable"><td><div style={{ display:"flex", alignItems:"center", gap:11 }}><div className="tile-ico" style={{ background:bg, color:fg, fontFamily:"var(--mono)", fontSize: 11, fontWeight:700, width:30, height:30 }}>{d.kind}</div><span className="t-strong">{d.name}</span></div></td><td>{D.empById[d.owner]?.name.split(" ")[0]}</td><td className="t-mono" style={{ fontSize: 14.5 }}>{d.updated}</td><td className="t-mono" style={{ fontSize: 14.5 }}>{d.size}</td><td style={{ textAlign:"right" }}><div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}><Btn variant="ghost" sm icon="eye" onClick={(e) => { e.stopPropagation(); handleView(d); }} /><Btn variant="ghost" sm icon="download" onClick={(e) => { e.stopPropagation(); handleDownload(d); }} /></div></td></tr>;
+            {filteredFiles.map(f => {
+              const [bg, fg] = KIND_COLORS[f.kind] || KIND_COLORS.FILE;
+              return (
+                <tr key={f._id} className="clickable">
+                  <td>
+                    <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+                      <div className="tile-ico" style={{ background:bg, color:fg, fontFamily:'var(--mono)', fontSize:10, fontWeight:700, width:30, height:30 }}>
+                        {f.kind}
+                      </div>
+                      <span className="t-strong">{f.name}</span>
+                    </div>
+                  </td>
+                  <td style={{ fontSize:14 }}>{f.ownerName}</td>
+                  <td className="t-mono" style={{ fontSize:14 }}>{f.updatedStr}</td>
+                  <td className="t-mono" style={{ fontSize:14 }}>{f.sizeStr}</td>
+                  <td style={{ textAlign:'right' }}>
+                    <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                      <Btn variant="ghost" sm icon="eye"      onClick={e => { e.stopPropagation(); handleView(f);     }} title="View" />
+                      <Btn variant="ghost" sm icon="download" onClick={e => { e.stopPropagation(); handleDownload(f); }} title="Download" />
+                      {canManage && (
+                        <Btn variant="ghost" sm icon="trash"  onClick={e => { e.stopPropagation(); handleDeleteFile(f); }} title="Delete" />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
             })}
-            {!isDemo && <tr><td colSpan={5} style={{ textAlign:"center", padding:"24px 0", color:"var(--muted)" }}>No files yet. Upload your first file.</td></tr>}
+            {filteredFiles.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ textAlign:'center', padding:'32px 0', color:'var(--muted)', fontSize:14 }}>
+                  {search ? 'No files match your search.' : 'No files here yet. Upload your first file.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </Card>

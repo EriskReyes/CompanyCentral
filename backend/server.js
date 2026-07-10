@@ -10,6 +10,7 @@ import teamRoutes       from './routes/team.js';
 import companyRoutes    from './routes/company.js';
 import vademecumRoutes  from './routes/vademecum.js';  // módulo de artículos del vademecum
 import dienstplanRoutes from './routes/dienstplan.js'; // módulo de plan de turnos mensual
+import filesRoutes      from './routes/files.js';      // módulo de archivos de la empresa
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/team',      teamRoutes);      // rutas de empleados
 app.use('/api/company',   companyRoutes);   // rutas de datos de la empresa
 app.use('/api/vademecum',  vademecumRoutes);  // rutas de artículos del vademecum
 app.use('/api/dienstplan', dienstplanRoutes); // rutas del plan de turnos mensual
+app.use('/api/files',      filesRoutes);      // rutas de archivos de la empresa
 
 mongoose
   .connect(process.env.MONGODB_URI)
